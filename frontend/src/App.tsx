@@ -1,0 +1,25 @@
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import Layout from './components/layout/Layout'
+import Hero from './pages/Hero'
+import SkillTree from './pages/SkillTree'
+import QuestLog from './pages/QuestLog'
+import Chronicle from './pages/Chronicle'
+import GuildHall from './pages/GuildHall'
+import Oracle from './pages/Oracle'
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Layout>
+        <Routes>
+          <Route path="/" element={<Hero />} />
+          <Route path="/skills" element={<SkillTree />} />
+          <Route path="/quests" element={<QuestLog />} />
+          <Route path="/chronicle" element={<Chronicle />} />
+          <Route path="/guild" element={<GuildHall />} />
+          <Route path="/oracle" element={<Oracle />} />
+        </Routes>
+      </Layout>
+    </BrowserRouter>
+  )
+}
