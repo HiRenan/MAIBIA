@@ -24,7 +24,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       />
 
       {/* 3D particle starfield */}
-      <Suspense fallback={null}>
+      <Suspense
+        fallback={
+          <div className="pointer-events-none fixed inset-0 flex items-center justify-center" style={{ zIndex: 0 }}>
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-accent-gold/20 border-t-accent-gold/60" />
+          </div>
+        }
+      >
         <ParticleBackground />
       </Suspense>
 

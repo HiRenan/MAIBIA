@@ -6,6 +6,7 @@ import QuestLog from './pages/QuestLog'
 import Chronicle from './pages/Chronicle'
 import GuildHall from './pages/GuildHall'
 import Oracle from './pages/Oracle'
+import NotFound from './pages/NotFound'
 
 export default function App() {
   return (
@@ -18,6 +19,7 @@ export default function App() {
           <Route path="/chronicle" element={<Chronicle />} />
           <Route path="/guild" element={<GuildHall />} />
           <Route path="/oracle" element={<Oracle />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Layout>
     </BrowserRouter>
