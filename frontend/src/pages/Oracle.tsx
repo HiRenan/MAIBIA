@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { Sparkles, Send, User } from 'lucide-react'
-import PageHeader from '../components/ui/PageHeader'
 import { api } from '../services/api'
 
 interface Message {

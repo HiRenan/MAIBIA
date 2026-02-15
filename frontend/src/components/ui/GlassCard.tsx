@@ -1,5 +1,5 @@
 import { motion, type HTMLMotionProps } from 'motion/react'
-import { forwardRef } from 'react'
+import { forwardRef, type ReactNode } from 'react'
 
 function CornerBrackets({ color = 'rgba(240, 192, 64, 0.2)' }: { color?: string }) {
   const style = { borderColor: color }
@@ -34,7 +34,7 @@ const GlassCard = forwardRef<HTMLDivElement, GlassCardProps>(
         {...props}
       >
         {corners && <CornerBrackets color={accentColor} />}
-        {children}
+        {children as ReactNode}
       </motion.div>
     )
   }

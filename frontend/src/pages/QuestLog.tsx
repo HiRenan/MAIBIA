@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { Star, GitFork, Wand2, Circle, Search, SortAsc, Zap, X } from 'lucide-react'
+import { Star, GitFork, Wand2, Circle, Search, SortAsc, Zap } from 'lucide-react'
 import PageHeader from '../components/ui/PageHeader'
 import Modal from '../components/ui/Modal'
 import { SkeletonCard } from '../components/ui/SkeletonLoader'
@@ -12,7 +12,7 @@ const container = {
 }
 const item = {
   hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' } },
+  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' as const } },
 }
 
 type Rarity = 'Common' | 'Rare' | 'Epic' | 'Legendary'
