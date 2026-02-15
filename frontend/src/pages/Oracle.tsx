@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { Sparkles, Send, User } from 'lucide-react'
 import PageHeader from '../components/ui/PageHeader'
+import { api } from '../services/api'
 
 interface Message {
   role: 'oracle' | 'user'
@@ -112,17 +113,23 @@ export default function Oracle() {
     setShowSuggestions(false)
     setIsTyping(true)
 
-    // Simulate thinking delay
-    const delay = 800 + Math.random() * 700
-    setTimeout(() => {
-      const response = getOracleResponse(text)
+    // Try API first, fall back to local responses
+    const addResponse = (response: string) => {
       const oracleMsg: Message = { role: 'oracle', text: response }
       setIsTyping(false)
       setMessages((prev) => {
         setAnimatingIndex(prev.length)
         return [...prev, oracleMsg]
       })
-    }, delay)
+    }
+
+    api.chat(text).then((result) => {
+      if (result?.text) {
+        setTimeout(() => addResponse(result.text), 400 + Math.random() * 400)
+      } else {
+        setTimeout(() => addResponse(getOracleResponse(text)), 800 + Math.random() * 700)
+      }
+    })
   }, [isTyping])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {

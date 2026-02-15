@@ -1,9 +1,10 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { Star, GitFork, Wand2, Circle, Search, SortAsc, Zap, X } from 'lucide-react'
 import PageHeader from '../components/ui/PageHeader'
 import Modal from '../components/ui/Modal'
 import { SkeletonCard } from '../components/ui/SkeletonLoader'
+import { api } from '../services/api'
 
 const container = {
   hidden: { opacity: 0 },
@@ -171,12 +172,50 @@ const QUESTS: Quest[] = [
 const FILTERS = ['All Quests', 'Active', 'Completed'] as const
 const SORT_OPTIONS = ['Stars', 'XP', 'Name'] as const
 
+const LANG_COLORS: Record<string, string> = {
+  TypeScript: '#3178c6', Python: '#3572A5', JavaScript: '#f1e05a', Go: '#00ADD8',
+  Rust: '#dea584', HTML: '#e34c26', CSS: '#563d7c', Java: '#b07219', Ruby: '#701516',
+  Shell: '#89e051', Unknown: '#94a3b8',
+}
+
+function repoToQuest(repo: { name: string; description: string; language: string; stars: number; forks: number; status: string; rarity: string; xp: number }): Quest {
+  return {
+    name: repo.name,
+    description: repo.description,
+    language: repo.language,
+    langColor: LANG_COLORS[repo.language] || '#94a3b8',
+    stars: repo.stars,
+    forks: repo.forks,
+    status: (repo.status === 'Active' ? 'Active' : 'Completed') as Status,
+    statusColor: repo.status === 'Active' ? '#f0c040' : '#22c55e',
+    rarity: (['Common', 'Rare', 'Epic', 'Legendary'].includes(repo.rarity) ? repo.rarity : 'Common') as Rarity,
+    xp: repo.xp,
+    techStack: [repo.language].filter(Boolean),
+    contributors: 1,
+    aiAnalysis: {
+      score: 0,
+      summary: 'Click Analyze Quest to generate AI analysis.',
+      strengths: [],
+      improvements: [],
+    },
+  }
+}
+
 export default function QuestLog() {
   const [activeFilter, setActiveFilter] = useState<number>(0)
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState<typeof SORT_OPTIONS[number]>('Stars')
   const [selectedQuest, setSelectedQuest] = useState<Quest | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [quests, setQuests] = useState<Quest[]>(QUESTS)
+
+  useEffect(() => {
+    api.getRepos().then((data) => {
+      if (data?.repos && data.repos.length > 0) {
+        setQuests(data.repos.map(repoToQuest))
+      }
+    })
+  }, [])
 
   const handleFilterChange = useCallback((index: number) => {
     setIsLoading(true)
@@ -185,7 +224,7 @@ export default function QuestLog() {
   }, [])
 
   const filteredQuests = useMemo(() => {
-    let result = [...QUESTS]
+    let result = [...quests]
 
     // Filter by status
     if (activeFilter === 1) result = result.filter((q) => q.status === 'Active')
@@ -208,7 +247,7 @@ export default function QuestLog() {
     if (sortBy === 'Name') result.sort((a, b) => a.name.localeCompare(b.name))
 
     return result
-  }, [activeFilter, searchQuery, sortBy])
+  }, [activeFilter, searchQuery, sortBy, quests])
 
   return (
     <motion.div variants={container} initial="hidden" animate="show">

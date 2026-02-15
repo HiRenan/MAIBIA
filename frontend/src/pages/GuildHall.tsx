@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react'
 import { Upload, Wand2, Swords, Brain, Eye, Heart, FileText, Download, Trophy, Code, Flame, Shield } from 'lucide-react'
 import PageHeader from '../components/ui/PageHeader'
 import GlassCard from '../components/ui/GlassCard'
+import { api } from '../services/api'
 
 const container = {
   hidden: { opacity: 0 },
@@ -133,6 +134,7 @@ function RadarChart({ stats }: { stats: typeof STATS_RPG }) {
 
 export default function GuildHall() {
   const [uploadedFile, setUploadedFile] = useState<string | null>(null)
+  const [currentFile, setCurrentFile] = useState<File | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [showAnalysis, setShowAnalysis] = useState(false)
   const [isDragOver, setIsDragOver] = useState(false)
@@ -141,6 +143,7 @@ export default function GuildHall() {
   const handleFile = useCallback((file: File) => {
     if (file.size > 5 * 1024 * 1024) return
     setUploadedFile(file.name)
+    setCurrentFile(file)
     setShowAnalysis(false)
   }, [])
 
@@ -153,11 +156,18 @@ export default function GuildHall() {
 
   const handleAnalyze = useCallback(() => {
     setIsAnalyzing(true)
-    setTimeout(() => {
-      setIsAnalyzing(false)
-      setShowAnalysis(true)
-    }, 1500)
-  }, [])
+    if (currentFile) {
+      api.uploadCV(currentFile).then(() => {
+        setIsAnalyzing(false)
+        setShowAnalysis(true)
+      })
+    } else {
+      setTimeout(() => {
+        setIsAnalyzing(false)
+        setShowAnalysis(true)
+      }, 1500)
+    }
+  }, [currentFile])
 
   return (
     <motion.div variants={container} initial="hidden" animate="show">

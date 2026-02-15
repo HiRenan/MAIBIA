@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom'
 import { Shield, Zap, Crown, ChevronRight, Trophy, Code, GitBranch, Star } from 'lucide-react'
 import AnimatedCounter from '../components/ui/AnimatedCounter'
 import GlassCard from '../components/ui/GlassCard'
+import { api, type ProfileResponse } from '../services/api'
+import { useAPI } from '../hooks/useAPI'
 
 const container = {
   hidden: { opacity: 0 },
@@ -18,11 +20,13 @@ const item = {
   show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' } },
 }
 
-const STATS = [
-  { label: 'Level', value: 15, display: '15', icon: Shield, accent: 'accent-gold', glow: 'rgba(240, 192, 64, 0.15)', link: '/skills' },
-  { label: 'Total XP', value: 6450, display: '6,450', icon: Zap, accent: 'accent-purple', glow: 'rgba(139, 92, 246, 0.15)', link: '/quests' },
-  { label: 'Class', value: 0, display: 'Full-Stack Mage', icon: Crown, accent: 'accent-blue', glow: 'rgba(59, 130, 246, 0.15)', link: '/guild' },
-]
+function getStats(profile: ProfileResponse) {
+  return [
+    { label: 'Level', value: profile.level, display: String(profile.level), icon: Shield, accent: 'accent-gold', glow: 'rgba(240, 192, 64, 0.15)', link: '/skills' },
+    { label: 'Total XP', value: profile.xp, display: profile.xp.toLocaleString(), icon: Zap, accent: 'accent-purple', glow: 'rgba(139, 92, 246, 0.15)', link: '/quests' },
+    { label: 'Class', value: 0, display: profile.dev_class, icon: Crown, accent: 'accent-blue', glow: 'rgba(59, 130, 246, 0.15)', link: '/guild' },
+  ]
+}
 
 const BADGES = [
   { label: 'First Commit', icon: GitBranch, color: '#22c55e' },
@@ -53,9 +57,26 @@ function useTypewriter(text: string, speed = 60, delay = 800) {
   return displayed
 }
 
+const FALLBACK_PROFILE: ProfileResponse = {
+  name: 'Renan Carvalho',
+  title: 'Full-Stack Mage',
+  dev_class: 'Full-Stack Mage',
+  level: 15,
+  xp: 6450,
+  xp_next_level: 10000,
+  avatar_initials: 'RC',
+  stats: {
+    STR: { value: 72, label: 'Problem Solving' },
+    INT: { value: 88, label: 'Technical Knowledge' },
+    DEX: { value: 65, label: 'Adaptability' },
+    WIS: { value: 70, label: 'Soft Skills' },
+  },
+}
+
 export default function Hero() {
   const navigate = useNavigate()
-  const subtitle = useTypewriter('Full-Stack Mage  \u2022  Level 15', 50, 600)
+  const { data: profile } = useAPI(api.getProfile, FALLBACK_PROFILE)
+  const subtitle = useTypewriter(`${profile.dev_class}  \u2022  Level ${profile.level}`, 50, 600)
 
   return (
     <motion.div
@@ -120,7 +141,7 @@ export default function Hero() {
 
       {/* Stat cards — clickable, with animated counters */}
       <motion.div variants={item} className="grid w-full max-w-2xl grid-cols-1 gap-4 sm:grid-cols-3">
-        {STATS.map((stat) => {
+        {getStats(profile).map((stat) => {
           const Icon = stat.icon
           return (
             <GlassCard
@@ -178,7 +199,7 @@ export default function Hero() {
         <div className="mb-2 flex justify-between text-xs text-text-muted">
           <span className="font-heading tracking-wider uppercase">Experience</span>
           <span>
-            <AnimatedCounter value={6450} duration={1.4} separator="," /> / 10,000 XP
+            <AnimatedCounter value={profile.xp} duration={1.4} separator="," /> / {profile.xp_next_level.toLocaleString()} XP
           </span>
         </div>
         <div className="relative h-2 overflow-hidden rounded-full bg-bg-secondary">
@@ -189,7 +210,7 @@ export default function Hero() {
               boxShadow: '0 0 12px rgba(240, 192, 64, 0.4)',
             }}
             initial={{ width: 0 }}
-            animate={{ width: '64.5%' }}
+            animate={{ width: `${(profile.xp / profile.xp_next_level) * 100}%` }}
             transition={{ duration: 1.4, ease: 'easeOut', delay: 0.8 }}
           />
         </div>

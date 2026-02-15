@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'motion/react'
 import {
@@ -37,7 +37,18 @@ function OrnamentalDivider() {
 }
 
 function XPBar() {
-  const xp = 65 // placeholder percentage
+  const [profileData, setProfileData] = useState({ level: 15, xp: 6450, xp_next_level: 10000 })
+
+  useEffect(() => {
+    fetch((import.meta.env.VITE_API_URL || '/api') + '/gamification/profile')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.level) setProfileData({ level: d.level, xp: d.xp, xp_next_level: d.xp_next_level })
+      })
+      .catch(() => {})
+  }, [])
+
+  const xp = (profileData.xp / profileData.xp_next_level) * 100
 
   return (
     <div className="px-4 pb-4">
@@ -52,11 +63,11 @@ function XPBar() {
           <div className="flex items-center gap-1.5">
             <Shield className="h-3.5 w-3.5 text-accent-gold" />
             <span className="font-heading text-[11px] font-semibold tracking-wider text-accent-gold uppercase">
-              Level 15
+              Level {profileData.level}
             </span>
           </div>
           <span className="font-body text-[10px] text-text-muted">
-            6,450 / 10,000 XP
+            {profileData.xp.toLocaleString()} / {profileData.xp_next_level.toLocaleString()} XP
           </span>
         </div>
         <div className="relative h-1.5 overflow-hidden rounded-full bg-bg-primary">
