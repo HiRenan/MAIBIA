@@ -22,14 +22,14 @@
 
 ### Exemplos de problemas (do mais desafiador ao menos desafiador)
 
-| Nível         | Exemplo                                                                                                                | Por quê é bom?                                                    |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Nível | Exemplo | Por quê é bom? |
+|-------|---------|-----------------|
 | **Excelente** | Sistema de diagnóstico que ajuda técnicos a resolver problemas em máquinas industriais com base em sintomas reportados | Múltiplas telas, fluxo complexo, formulários dinâmicos, histórico |
-| **Excelente** | Plataforma de análise de currículos que extrai informações e sugere melhorias por seção                                | Upload de arquivos, parsing, interface de comparação, relatório   |
-| **Bom**       | Sistema de triagem médica que coleta sintomas e gera relatório preliminar para o médico                                | Formulários condicionais, visualização de dados, relatório        |
-| **Bom**       | Assistente de documentação técnica que organiza manuais e permite buscas contextuais                                   | Upload, indexação visual, interface de busca, visualização        |
-| **Fraco**     | Chatbot genérico de perguntas e respostas                                                                              | Interface trivial — uma caixa de texto e um botão                 |
-| **Fraco**     | Tradutor de texto simples                                                                                              | Um campo de entrada, um botão, um campo de saída                  |
+| **Excelente** | Plataforma de análise de currículos que extrai informações e sugere melhorias por seção | Upload de arquivos, parsing, interface de comparação, relatório |
+| **Bom** | Sistema de triagem médica que coleta sintomas e gera relatório preliminar para o médico | Formulários condicionais, visualização de dados, relatório |
+| **Bom** | Assistente de documentação técnica que organiza manuais e permite buscas contextuais | Upload, indexação visual, interface de busca, visualização |
+| **Fraco** | Chatbot genérico de perguntas e respostas | Interface trivial — uma caixa de texto e um botão |
+| **Fraco** | Tradutor de texto simples | Um campo de entrada, um botão, um campo de saída |
 
 > **Regra geral:** Se a UI pode ser construída com apenas 1-2 componentes simples, o problema não é desafiador o suficiente.
 
@@ -41,68 +41,68 @@ A nota da avaliação intermediária é composta por **30 pontos** (equivalentes
 
 ### 1. Endpoint Funcional (8 pontos)
 
-| Pontos | Critério                                                                                                                                                      |
-| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 8      | Endpoint acessível, aplicação carrega completamente, todas as telas/abas navegáveis, interações (botões, formulários) funcionam mesmo que com dados simulados |
-| 6      | Endpoint acessível, aplicação carrega, maioria das funcionalidades opera, pequenos bugs visuais                                                               |
-| 4      | Endpoint acessível, aplicação carrega mas com funcionalidades parcialmente quebradas                                                                          |
-| 2      | Endpoint acessível mas a aplicação tem erros significativos ou não carrega corretamente                                                                       |
-| 0      | Endpoint não funciona ou não foi compartilhado                                                                                                                |
+| Pontos | Critério |
+|--------|----------|
+| 8 | Endpoint acessível, aplicação carrega completamente, todas as telas/abas navegáveis, interações (botões, formulários) funcionam mesmo que com dados simulados |
+| 6 | Endpoint acessível, aplicação carrega, maioria das funcionalidades opera, pequenos bugs visuais |
+| 4 | Endpoint acessível, aplicação carrega mas com funcionalidades parcialmente quebradas |
+| 2 | Endpoint acessível mas a aplicação tem erros significativos ou não carrega corretamente |
+| 0 | Endpoint não funciona ou não foi compartilhado |
 
 ### 2. Complexidade e Ambição do Problema (6 pontos)
 
-| Pontos | Critério                                                                                                                                                               |
-| ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 6      | Problema genuinamente desafiador, com múltiplos fluxos, tipos de interação e componentes de UI variados. Demonstra visão clara de como a IA será integrada futuramente |
-| 4      | Problema com complexidade moderada — pelo menos 2-3 telas ou modos de interação diferentes                                                                             |
-| 2      | Problema simples mas com algum esforço de UI além do trivial                                                                                                           |
-| 0      | Problema trivial (ex: chatbot simples, tradutor básico)                                                                                                                |
+| Pontos | Critério |
+|--------|----------|
+| 6 | Problema genuinamente desafiador, com múltiplos fluxos, tipos de interação e componentes de UI variados. Demonstra visão clara de como a IA será integrada futuramente |
+| 4 | Problema com complexidade moderada — pelo menos 2-3 telas ou modos de interação diferentes |
+| 2 | Problema simples mas com algum esforço de UI além do trivial |
+| 0 | Problema trivial (ex: chatbot simples, tradutor básico) |
 
 ### 3. Repositório GitHub (4 pontos)
 
-| Pontos | Critério                                                                                                                                                     |
-| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 4      | Repositório organizado, com commits ao longo do desenvolvimento (não apenas um commit final), estrutura de pastas clara, .gitignore adequado, código legível |
-| 3      | Repositório funcional com múltiplos commits, boa organização                                                                                                 |
-| 2      | Repositório funcional mas com apenas 1-2 commits ou organização básica                                                                                       |
-| 1      | Repositório existe mas com código desorganizado ou sem histórico relevante                                                                                   |
-| 0      | Repositório não foi compartilhado                                                                                                                            |
+| Pontos | Critério |
+|--------|----------|
+| 4 | Repositório organizado, com commits ao longo do desenvolvimento (não apenas um commit final), estrutura de pastas clara, .gitignore adequado, código legível |
+| 3 | Repositório funcional com múltiplos commits, boa organização |
+| 2 | Repositório funcional mas com apenas 1-2 commits ou organização básica |
+| 1 | Repositório existe mas com código desorganizado ou sem histórico relevante |
+| 0 | Repositório não foi compartilhado |
 
 ### 4. README — Documentação do Processo (8 pontos)
 
 O README é a parte mais importante da documentação. Deve conter:
 
-| Pontos | Critério                                                                                                                                                         |
-| ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **2**  | **Descrição do problema e da solução proposta** — O que o sistema faz? Qual problema resolve? Como a IA será integrada no futuro?                                |
-| **2**  | **Escolhas de design** — Por que essa arquitetura? Por que esses componentes de UI? Que alternativas foram consideradas?                                         |
-| **2**  | **O que funcionou** — Quais partes o agente de codificação gerou bem? Onde a experiência foi positiva? Exemplos específicos de prompts que deram bons resultados |
-| **2**  | **O que não funcionou** — Onde o agente falhou? O que precisou de intervenção manual? Quais limitações foram encontradas? O que seria feito diferente?           |
+| Pontos | Critério |
+|--------|----------|
+| **2** | **Descrição do problema e da solução proposta** — O que o sistema faz? Qual problema resolve? Como a IA será integrada no futuro? |
+| **2** | **Escolhas de design** — Por que essa arquitetura? Por que esses componentes de UI? Que alternativas foram consideradas? |
+| **2** | **O que funcionou** — Quais partes o agente de codificação gerou bem? Onde a experiência foi positiva? Exemplos específicos de prompts que deram bons resultados |
+| **2** | **O que não funcionou** — Onde o agente falhou? O que precisou de intervenção manual? Quais limitações foram encontradas? O que seria feito diferente? |
 
 > **Nota:** Honestidade na documentação é valorizada. Um README que diz "tudo funcionou perfeitamente" receberá menos pontos do que um que analisa criticamente a experiência.
 
 ### 5. Uso Efetivo do Agente de Codificação (4 pontos)
 
-| Pontos | Critério                                                                                                                                                                                        |
-| ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 4      | Evidência clara de uso extensivo do agente (menção de prompts usados, logs ou screenshots, iterações). Demonstra que a maior parte do código foi gerada pelo agente com supervisão do estudante |
-| 3      | Uso significativo do agente com alguma documentação da interação                                                                                                                                |
-| 2      | Uso básico do agente, pouca documentação da experiência                                                                                                                                         |
-| 1      | Evidência mínima de uso do agente                                                                                                                                                               |
-| 0      | Sem evidência de uso de agente de codificação                                                                                                                                                   |
+| Pontos | Critério |
+|--------|----------|
+| 4 | Evidência clara de uso extensivo do agente (menção de prompts usados, logs ou screenshots, iterações). Demonstra que a maior parte do código foi gerada pelo agente com supervisão do estudante |
+| 3 | Uso significativo do agente com alguma documentação da interação |
+| 2 | Uso básico do agente, pouca documentação da experiência |
+| 1 | Evidência mínima de uso do agente |
+| 0 | Sem evidência de uso de agente de codificação |
 
 ---
 
 ## Resumo da Pontuação
 
-| Critério                             | Pontos |
-| ------------------------------------ | ------ |
-| Endpoint funcional                   | 8      |
-| Complexidade e ambição do problema   | 6      |
-| Repositório GitHub                   | 4      |
-| README — Documentação do processo    | 8      |
-| Uso efetivo do agente de codificação | 4      |
-| **Total**                            | **30** |
+| Critério | Pontos |
+|----------|--------|
+| Endpoint funcional | 8 |
+| Complexidade e ambição do problema | 6 |
+| Repositório GitHub | 4 |
+| README — Documentação do processo | 8 |
+| Uso efetivo do agente de codificação | 4 |
+| **Total** | **30** |
 
 ---
 
@@ -133,7 +133,6 @@ Para melhores resultados com os agentes de codificação, sugiro a seguinte stac
 - **Banco de dados local:** SQLite (um único arquivo `.db`, sem necessidade de Docker ou servidor de banco de dados — Python já tem suporte nativo via `sqlite3`)
 
 Essa combinação funciona bem porque:
-
 1. Os agentes de codificação geram código Python e React com alta qualidade
 2. SQLite não exige instalação nem configuração — é apenas um arquivo
 3. FastAPI + React é uma arquitetura moderna que se integra facilmente com APIs de LLM no futuro
