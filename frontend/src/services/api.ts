@@ -76,6 +76,13 @@ export interface RepoData {
   xp: number
   html_url: string
   updated_at: string
+  homepage?: string
+  topics?: string[]
+  created_at?: string
+  size?: number
+  open_issues_count?: number
+  has_pages?: boolean
+  owner?: string
 }
 
 export interface ReposResponse {
@@ -107,6 +114,17 @@ export interface AnalyzeRepoResponse {
   strengths: string[]
   improvements: string[]
   summary: string
+  metrics?: Record<string, number>
+  category_tags?: string[]
+}
+
+export interface QuestStatsResponse {
+  total_repos: number
+  total_stars: number
+  total_xp: number
+  languages: string[]
+  active_quests: number
+  completed_quests: number
 }
 
 // API functions
@@ -124,6 +142,7 @@ export const api = {
   analyzeRepo: (owner: string, repo: string) =>
     fetchAPI<AnalyzeRepoResponse>(`/github/repos/${owner}/${repo}/analyze`, { method: 'POST' }),
   getGitHubProfile: () => fetchAPI<Record<string, unknown>>('/github/profile'),
+  getQuestStats: () => fetchAPI<QuestStatsResponse>('/github/quest-stats'),
 
   // CV
   uploadCV: async (file: File): Promise<CVAnalysisResponse | null> => {

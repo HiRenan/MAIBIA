@@ -11,12 +11,12 @@ GITHUB_API = "https://api.github.com"
 
 # Fallback repos matching QuestLog.tsx QUESTS when API is unavailable
 FALLBACK_REPOS = [
-    {"name": "DevQuest", "description": "Gamified career intelligence platform", "language": "TypeScript", "stars": 42, "forks": 5, "status": "Active", "rarity": "Epic", "xp": 320, "html_url": f"https://github.com/{GITHUB_USER}/DevQuest", "updated_at": "2024-11-15"},
-    {"name": "ML-Pipeline", "description": "End-to-end ML pipeline with FastAPI", "language": "Python", "stars": 28, "forks": 8, "status": "Completed", "rarity": "Epic", "xp": 280, "html_url": f"https://github.com/{GITHUB_USER}/ML-Pipeline", "updated_at": "2024-08-20"},
-    {"name": "React-Dashboard", "description": "Analytics dashboard with charts", "language": "TypeScript", "stars": 15, "forks": 3, "status": "Completed", "rarity": "Rare", "xp": 200, "html_url": f"https://github.com/{GITHUB_USER}/React-Dashboard", "updated_at": "2024-06-10"},
-    {"name": "Chat-API", "description": "Real-time chat backend with WebSockets", "language": "JavaScript", "stars": 8, "forks": 2, "status": "Completed", "rarity": "Rare", "xp": 180, "html_url": f"https://github.com/{GITHUB_USER}/Chat-API", "updated_at": "2024-03-15"},
-    {"name": "Portfolio-v1", "description": "First portfolio website", "language": "HTML", "stars": 3, "forks": 1, "status": "Completed", "rarity": "Common", "xp": 120, "html_url": f"https://github.com/{GITHUB_USER}/Portfolio-v1", "updated_at": "2023-12-01"},
-    {"name": "CLI-Tools", "description": "Collection of utility scripts", "language": "Python", "stars": 5, "forks": 0, "status": "Active", "rarity": "Rare", "xp": 150, "html_url": f"https://github.com/{GITHUB_USER}/CLI-Tools", "updated_at": "2024-10-05"},
+    {"name": "DevQuest", "description": "Gamified career intelligence platform", "language": "TypeScript", "stars": 42, "forks": 5, "status": "Active", "rarity": "Epic", "xp": 320, "html_url": f"https://github.com/{GITHUB_USER}/DevQuest", "updated_at": "2024-11-15", "homepage": "", "topics": ["react", "typescript", "fastapi", "gamification"], "created_at": "2024-06-01", "size": 2400, "open_issues_count": 3, "has_pages": False, "owner": GITHUB_USER},
+    {"name": "ML-Pipeline", "description": "End-to-end ML pipeline with FastAPI", "language": "Python", "stars": 28, "forks": 8, "status": "Completed", "rarity": "Epic", "xp": 280, "html_url": f"https://github.com/{GITHUB_USER}/ML-Pipeline", "updated_at": "2024-08-20", "homepage": "", "topics": ["python", "machine-learning", "fastapi"], "created_at": "2024-01-15", "size": 1800, "open_issues_count": 0, "has_pages": False, "owner": GITHUB_USER},
+    {"name": "React-Dashboard", "description": "Analytics dashboard with charts", "language": "TypeScript", "stars": 15, "forks": 3, "status": "Completed", "rarity": "Rare", "xp": 200, "html_url": f"https://github.com/{GITHUB_USER}/React-Dashboard", "updated_at": "2024-06-10", "homepage": "", "topics": ["react", "dashboard", "charts"], "created_at": "2024-02-10", "size": 1200, "open_issues_count": 1, "has_pages": False, "owner": GITHUB_USER},
+    {"name": "Chat-API", "description": "Real-time chat backend with WebSockets", "language": "JavaScript", "stars": 8, "forks": 2, "status": "Completed", "rarity": "Rare", "xp": 180, "html_url": f"https://github.com/{GITHUB_USER}/Chat-API", "updated_at": "2024-03-15", "homepage": "", "topics": ["nodejs", "websockets", "api"], "created_at": "2023-11-01", "size": 800, "open_issues_count": 0, "has_pages": False, "owner": GITHUB_USER},
+    {"name": "Portfolio-v1", "description": "First portfolio website", "language": "HTML", "stars": 3, "forks": 1, "status": "Completed", "rarity": "Common", "xp": 120, "html_url": f"https://github.com/{GITHUB_USER}/Portfolio-v1", "updated_at": "2023-12-01", "homepage": "", "topics": ["html", "css", "portfolio"], "created_at": "2023-06-15", "size": 450, "open_issues_count": 0, "has_pages": True, "owner": GITHUB_USER},
+    {"name": "CLI-Tools", "description": "Collection of utility scripts", "language": "Python", "stars": 5, "forks": 0, "status": "Active", "rarity": "Rare", "xp": 150, "html_url": f"https://github.com/{GITHUB_USER}/CLI-Tools", "updated_at": "2024-10-05", "homepage": "", "topics": ["python", "cli", "automation"], "created_at": "2024-04-20", "size": 320, "open_issues_count": 2, "has_pages": False, "owner": GITHUB_USER},
 ]
 
 
@@ -68,6 +68,13 @@ async def get_repos():
                 "xp": _calculate_xp(repo),
                 "html_url": repo.get("html_url", ""),
                 "updated_at": repo.get("updated_at", ""),
+                "homepage": repo.get("homepage") or "",
+                "topics": repo.get("topics", []),
+                "created_at": repo.get("created_at", ""),
+                "size": repo.get("size", 0),
+                "open_issues_count": repo.get("open_issues_count", 0),
+                "has_pages": repo.get("has_pages", False),
+                "owner": repo.get("owner", {}).get("login", GITHUB_USER),
             })
         return {"repos": quests, "source": "github"}
     except Exception:
@@ -108,6 +115,24 @@ async def get_repo_detail(owner: str, repo: str):
 async def analyze_repo(owner: str, repo: str):
     """Return mock AI analysis for a repo."""
     return analyze_github_project(f"{owner}/{repo}")
+
+
+@router.get("/quest-stats")
+async def get_quest_stats():
+    """Aggregate stats for the Quest Log overview."""
+    data = await get_repos()
+    repos = data.get("repos", [])
+    total_stars = sum(r.get("stars", 0) for r in repos)
+    total_xp = sum(r.get("xp", 0) for r in repos)
+    languages = list({r.get("language", "Unknown") for r in repos})
+    return {
+        "total_repos": len(repos),
+        "total_stars": total_stars,
+        "total_xp": total_xp,
+        "languages": languages,
+        "active_quests": sum(1 for r in repos if r.get("status") == "Active"),
+        "completed_quests": sum(1 for r in repos if r.get("status") == "Completed"),
+    }
 
 
 @router.get("/profile")

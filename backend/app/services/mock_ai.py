@@ -10,8 +10,16 @@ def analyze_github_project(repo_name: str) -> dict:
         "repo": repo_name,
         "score": 85,
         "strengths": ["Clean code structure", "Good documentation", "Active development"],
-        "improvements": ["Add more tests", "Consider CI/CD pipeline"],
+        "improvements": ["Add more tests", "Consider CI/CD pipeline", "Add error handling"],
         "summary": f"Project '{repo_name}' shows strong development practices.",
+        "metrics": {
+            "code_quality": 88,
+            "documentation": 72,
+            "testing": 45,
+            "architecture": 82,
+            "security": 68,
+        },
+        "category_tags": ["well-structured", "needs-tests", "active"],
     }
 
 
