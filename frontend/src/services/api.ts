@@ -127,6 +127,49 @@ export interface QuestStatsResponse {
   completed_quests: number
 }
 
+export interface TimelineEntry {
+  id: string
+  category: 'experience' | 'education' | 'awards' | 'certifications'
+  year: string
+  yearEnd: string | null
+  title: string
+  place: string
+  description: string
+  skills: string[]
+  color: string
+  icon: string
+}
+
+export interface TimelineResponse {
+  entries: TimelineEntry[]
+}
+
+export interface BlogPostData {
+  id: number
+  title: string
+  content: string
+  category: 'update' | 'project' | 'achievement' | 'thought'
+  tags: string
+  color: string
+  pinned: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface BlogPostsResponse {
+  posts: BlogPostData[]
+  total: number
+}
+
+export interface BlogPostCreate {
+  title: string
+  content: string
+  category?: string
+  tags?: string
+  color?: string
+  pinned?: boolean
+}
+
 // API functions
 export const api = {
   // Gamification
@@ -134,6 +177,7 @@ export const api = {
   getSkills: () => fetchAPI<SkillsResponse>('/gamification/skills'),
   getAchievements: () => fetchAPI<AchievementsResponse>('/gamification/achievements'),
   getWeeklySummary: () => fetchAPI<{ summary: string }>('/gamification/weekly-summary'),
+  getTimeline: () => fetchAPI<TimelineResponse>('/gamification/timeline'),
 
   // GitHub
   getRepos: () => fetchAPI<ReposResponse>('/github/repos'),
@@ -164,4 +208,14 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ message }),
     }),
+
+  // Blog
+  getBlogPosts: () => fetchAPI<BlogPostsResponse>('/blog/posts'),
+  getBlogPost: (id: number) => fetchAPI<BlogPostData>(`/blog/posts/${id}`),
+  createBlogPost: (data: BlogPostCreate) =>
+    fetchAPI<BlogPostData>('/blog/posts', { method: 'POST', body: JSON.stringify(data) }),
+  updateBlogPost: (id: number, data: BlogPostCreate) =>
+    fetchAPI<BlogPostData>(`/blog/posts/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteBlogPost: (id: number) =>
+    fetchAPI<{ success: boolean }>(`/blog/posts/${id}`, { method: 'DELETE' }),
 }

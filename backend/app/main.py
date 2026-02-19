@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import Session
 
 from app.database import create_db_and_tables, engine
-from app.routers import cv, gamification, github, oracle
+from app.routers import blog, cv, gamification, github, oracle
 from app.seed import seed_initial_data
 
 
@@ -34,6 +34,7 @@ app.include_router(github.router, prefix="/api")
 app.include_router(cv.router, prefix="/api")
 app.include_router(oracle.router, prefix="/api")
 app.include_router(gamification.router, prefix="/api")
+app.include_router(blog.router, prefix="/api")
 
 
 @app.get("/api/health")

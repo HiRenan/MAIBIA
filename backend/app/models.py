@@ -43,3 +43,15 @@ class Achievement(SQLModel, table=True):
     color: str = "#f0c040"
     unlocked: bool = False
     unlock_date: Optional[str] = None
+
+
+class BlogPost(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    title: str
+    content: str  # markdown content
+    category: str = "update"  # update, project, achievement, thought
+    tags: str = ""  # comma-separated
+    color: str = "#8b5cf6"
+    pinned: bool = False
+    created_at: str  # ISO date string
+    updated_at: str  # ISO date string

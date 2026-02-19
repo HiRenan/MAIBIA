@@ -8,6 +8,7 @@ import {
   BookOpen,
   Castle,
   Sparkles,
+  MessageSquare,
   Menu,
   X,
   Shield,
@@ -20,6 +21,7 @@ const NAV_ITEMS = [
   { path: '/chronicle', label: 'Chronicle', icon: BookOpen, subtitle: 'Timeline' },
   { path: '/guild', label: 'Guild Hall', icon: Castle, subtitle: 'Resume' },
   { path: '/oracle', label: 'Oracle', icon: Sparkles, subtitle: 'AI Advisor' },
+  { path: '/tavern', label: 'Tavern', icon: MessageSquare, subtitle: 'Blog & Social' },
 ]
 
 function OrnamentalDivider() {
