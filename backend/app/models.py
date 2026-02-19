@@ -55,3 +55,15 @@ class BlogPost(SQLModel, table=True):
     pinned: bool = False
     created_at: str  # ISO date string
     updated_at: str  # ISO date string
+
+
+class CVAnalysis(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    filename: str
+    file_size: int
+    score: int
+    strengths: str = ""  # JSON-serialized list
+    weaknesses: str = ""  # JSON-serialized list
+    tips: str = ""  # JSON-serialized list
+    sections: str = ""  # JSON-serialized list of {name, score, feedback}
+    created_at: str  # ISO date string

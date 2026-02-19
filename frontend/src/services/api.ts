@@ -102,10 +102,19 @@ export interface CVAnalysisSection {
 }
 
 export interface CVAnalysisResponse {
+  id: number
   filename: string
   size: number
   score: number
   sections: CVAnalysisSection[]
+  strengths: string[]
+  weaknesses: string[]
+  tips: string[]
+  created_at: string
+}
+
+export interface CVAnalysesResponse {
+  analyses: CVAnalysisResponse[]
 }
 
 export interface AnalyzeRepoResponse {
@@ -201,6 +210,7 @@ export const api = {
     }
   },
   getAnalysis: () => fetchAPI<CVAnalysisResponse>('/cv/analysis'),
+  getCVAnalyses: () => fetchAPI<CVAnalysesResponse>('/cv/analyses'),
 
   // Oracle
   chat: (message: string) =>
