@@ -2,7 +2,7 @@
 
 from sqlmodel import Session, select
 
-from app.models import Achievement, BlogPost, PlayerProfile, Skill
+from app.models import Achievement, BlogPost, ChatMessage, PlayerProfile, Skill
 
 
 def seed_initial_data(session: Session) -> None:
@@ -119,5 +119,15 @@ def seed_initial_data(session: Session) -> None:
         ]
         for post in blog_posts:
             session.add(post)
+
+    # Seed Oracle greeting if no messages exist
+    if not session.exec(select(ChatMessage)).first():
+        session.add(ChatMessage(
+            role="oracle",
+            text="Greetings, adventurer! I am the Oracle of DevQuest, keeper of ancient coding wisdom. "
+                 "Ask me about your skills, career path, projects, or how to level up your developer profile.",
+            context_topic="greeting",
+            created_at="2025-01-01T00:00:00",
+        ))
 
     session.commit()

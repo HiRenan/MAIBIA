@@ -1,50 +1,81 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { Sparkles, Send, User } from 'lucide-react'
-import { api } from '../services/api'
+import {
+  Sparkles, Send, User, MessageCircle, Brain, Compass, Flame,
+  Scroll, BookOpen, Zap, ChevronRight, Star, TrendingUp,
+} from 'lucide-react'
+import PageHeader from '../components/ui/PageHeader'
+import GlassCard from '../components/ui/GlassCard'
+import AnimatedCounter from '../components/ui/AnimatedCounter'
+import {
+  api,
+  type OracleHistoryResponse,
+  type OracleStatsResponse,
+  type OracleWeeklySummaryResponse,
+} from '../services/api'
+import { useAPI } from '../hooks/useAPI'
 
-interface Message {
+/* ═══════════════════════════════════════════
+   ANIMATION VARIANTS
+   ═══════════════════════════════════════════ */
+const container = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { staggerChildren: 0.08, delayChildren: 0.05 } },
+}
+const item = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' as const } },
+}
+
+/* ═══════════════════════════════════════════
+   TYPES & CONSTANTS
+   ═══════════════════════════════════════════ */
+interface ChatMsg {
+  id?: number
   role: 'oracle' | 'user'
   text: string
-}
-
-// Keyword-based mock responses
-const RESPONSES: Record<string, string> = {
-  improve: 'I sense great potential in your skill tree. Focus on deepening your backend expertise — it will unlock the Full-Stack Paladin class. Contributing to 2-3 more open source projects would earn you the "Community Champion" badge.',
-  skill: 'Your Frontend Arcana is strong at Level 78. To reach mastery, I recommend exploring Next.js and server-side rendering. For Backend Warfare, consider learning Docker — it will unlock container orchestration abilities.',
-  learn: 'The ancient scrolls suggest these paths: 1) Machine Learning fundamentals for the Data Sorcery branch, 2) Cloud Architecture (AWS/GCP) for deployment mastery, 3) System Design patterns to unlock the Architect class.',
-  profile: 'Your developer profile radiates a combined power level of 6,450 XP. You are classified as a Full-Stack Mage, Level 15. Your strongest attributes are INT (88) and STR (72). The weakest area is DEX (65) — focus on adaptability and new frameworks.',
-  project: 'Your most impressive quest is DevQuest Portfolio (Legendary rarity, 92/100 score). To boost your quest log further, consider starting a project that combines AI with your existing React skills — perhaps an intelligent code review tool.',
-  career: 'The stars align for a Senior Developer path. Your diverse skill set across frontend, backend, and data puts you in a strong position. Consider specializing in one area while maintaining breadth. Technical leadership roles await at Level 20.',
-  github: 'Your GitHub presence shows 6 active repositories with 177 combined stars. To increase visibility: 1) Write detailed READMEs, 2) Add live demos, 3) Contribute to trending repositories in your tech stack.',
-  react: 'React is one of your strongest abilities at Level 4/5. To reach mastery: explore React Server Components, master advanced hooks patterns, and build a complex state management solution without external libraries.',
-  python: 'Your Python mastery is at Level 4/5 — impressive! Consider diving into async Python with asyncio, explore FastAPI middleware patterns, and contribute to the Python ecosystem with a published package.',
-  hello: 'Greetings, brave adventurer! I am the Oracle of DevQuest, keeper of ancient coding wisdom. Ask me about your skills, career path, projects, or how to level up your developer profile.',
-  help: 'I can advise you on: your skill progression, career path recommendations, project ideas, GitHub profile optimization, specific technologies (React, Python, etc.), and your overall developer level assessment. What interests you?',
-}
-
-const DEFAULT_RESPONSE = 'The ancient runes are unclear on this matter. Try asking about your skills, career path, projects, or specific technologies like React and Python. I can also analyze your profile and suggest improvements.'
-
-function getOracleResponse(input: string): string {
-  const lower = input.toLowerCase()
-  for (const [keyword, response] of Object.entries(RESPONSES)) {
-    if (lower.includes(keyword)) return response
-  }
-  return DEFAULT_RESPONSE
-}
-
-const INITIAL_MESSAGE: Message = {
-  role: 'oracle',
-  text: 'Greetings, adventurer. I am the Oracle of DevQuest. Ask me about your career path, skills to develop, or how to level up your profile.',
+  created_at?: string
 }
 
 const SUGGESTIONS = [
-  'How can I improve?',
-  'What skills should I learn?',
-  'Analyze my profile',
-  'Tell me about my career path',
+  { text: 'How can I improve?', icon: TrendingUp },
+  { text: 'Analyze my skills', icon: Zap },
+  { text: 'Career advice', icon: Compass },
+  { text: 'Profile overview', icon: User },
+  { text: 'What should I learn?', icon: BookOpen },
+  { text: 'My strengths', icon: Flame },
 ]
 
+const ORACLE_TOPICS = [
+  { label: 'Skill Progression', desc: 'Level up your tech abilities' },
+  { label: 'Career Path', desc: 'Navigate your developer journey' },
+  { label: 'Project Ideas', desc: 'New quests to embark on' },
+  { label: 'GitHub Strategy', desc: 'Boost your open-source presence' },
+  { label: 'Stat Analysis', desc: 'STR, INT, DEX, WIS breakdown' },
+  { label: 'Weekly Focus', desc: 'Actionable goals for this week' },
+]
+
+/* ═══════════════════════════════════════════
+   FALLBACK DATA
+   ═══════════════════════════════════════════ */
+const FALLBACK_STATS: OracleStatsResponse = {
+  messages_sent: 0, wisdom_score: 70, topics_explored: 0, oracle_level: 1,
+}
+
+const FALLBACK_HISTORY: OracleHistoryResponse = {
+  messages: [], total: 0, has_more: false,
+}
+
+const FALLBACK_WEEKLY: OracleWeeklySummaryResponse = {
+  summary: 'Begin your journey by consulting the Oracle. Your wisdom grows with every question asked.',
+  xp_gained: 0, quests_completed: 0, skills_practiced: [],
+  achievement_progress: 'No data yet', oracle_tip: 'Ask the Oracle about your skills to get started.',
+  total_messages: 0,
+}
+
+/* ═══════════════════════════════════════════
+   SUB-COMPONENTS
+   ═══════════════════════════════════════════ */
 function TypingIndicator() {
   return (
     <div className="flex gap-3">
@@ -82,54 +113,153 @@ function TypewriterMessage({ text, onComplete }: { text: string; onComplete: () 
     return () => clearInterval(interval)
   }, [text, onComplete])
 
-  return <>{displayed}</>
+  return (
+    <>
+      {displayed}
+      <motion.span
+        className="ml-0.5 inline-block h-3.5 w-[2px] bg-accent-purple/70"
+        animate={{ opacity: [1, 0] }}
+        transition={{ duration: 0.5, repeat: Infinity }}
+      />
+    </>
+  )
 }
 
+function MessageBubble({
+  msg, isAnimating, onAnimComplete,
+}: {
+  msg: ChatMsg
+  isAnimating: boolean
+  onAnimComplete: () => void
+}) {
+  const isOracle = msg.role === 'oracle'
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className={`flex gap-3 ${isOracle ? '' : 'flex-row-reverse'}`}
+    >
+      {/* Avatar */}
+      <div
+        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
+          isOracle ? 'bg-accent-purple/15 text-accent-purple' : 'bg-accent-blue/15 text-accent-blue'
+        }`}
+      >
+        {isOracle ? <Sparkles className="h-4 w-4" /> : <User className="h-4 w-4" />}
+      </div>
+      {/* Bubble */}
+      <div
+        className={`max-w-[80%] rounded-xl px-4 py-3 text-xs leading-relaxed ${
+          isOracle
+            ? 'rounded-tl-sm border border-accent-purple/15 bg-accent-purple/5 text-text-secondary'
+            : 'rounded-tr-sm border border-accent-blue/15 bg-accent-blue/5 text-text-secondary'
+        }`}
+      >
+        {isOracle && isAnimating ? (
+          <TypewriterMessage text={msg.text} onComplete={onAnimComplete} />
+        ) : (
+          msg.text
+        )}
+      </div>
+    </motion.div>
+  )
+}
+
+function StatCard({ icon: Icon, label, value, color, suffix }: {
+  icon: typeof MessageCircle; label: string; value: number; color: string; suffix?: string
+}) {
+  return (
+    <GlassCard accentColor={`${color}33`} hover corners className="p-4">
+      <div className="flex items-center justify-between">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg" style={{ backgroundColor: `${color}15` }}>
+          <Icon className="h-4 w-4" style={{ color }} />
+        </div>
+        <div className="text-right">
+          <div className="font-display text-xl tracking-tight text-text-primary">
+            <AnimatedCounter value={value} duration={1.2} />{suffix}
+          </div>
+        </div>
+      </div>
+      <p className="font-heading mt-2 text-[10px] tracking-[0.2em] text-text-muted uppercase">{label}</p>
+    </GlassCard>
+  )
+}
+
+/* ═══════════════════════════════════════════
+   MAIN COMPONENT
+   ═══════════════════════════════════════════ */
 export default function Oracle() {
-  const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE])
+  /* ── API data ── */
+  const { data: stats, loading: statsLoading } = useAPI<OracleStatsResponse>(
+    () => api.getOracleStats(), FALLBACK_STATS,
+  )
+  const { data: history } = useAPI<OracleHistoryResponse>(
+    () => api.getOracleHistory(100, 0), FALLBACK_HISTORY,
+  )
+  const { data: weekly } = useAPI<OracleWeeklySummaryResponse>(
+    () => api.getOracleWeeklySummary(), FALLBACK_WEEKLY,
+  )
+
+  /* ── Local state ── */
+  const [pendingMessages, setPendingMessages] = useState<ChatMsg[]>([])
   const [input, setInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const [animatingIndex, setAnimatingIndex] = useState(-1)
-  const [showSuggestions, setShowSuggestions] = useState(true)
+  const [localStats, setLocalStats] = useState<OracleStatsResponse | null>(null)
   const chatRef = useRef<HTMLDivElement>(null)
 
+  /* ── Derive messages: API history + session messages ── */
+  const historyMessages = useMemo<ChatMsg[]>(
+    () => history.messages.map((m) => ({ id: m.id, role: m.role as 'oracle' | 'user', text: m.text, created_at: m.created_at })),
+    [history],
+  )
+  const messages = useMemo(() => [...historyMessages, ...pendingMessages], [historyMessages, pendingMessages])
+  const showSuggestions = messages.filter((m) => m.role === 'user').length === 0
+
+  /* ── Scroll to bottom ── */
   const scrollToBottom = useCallback(() => {
-    if (chatRef.current) {
-      chatRef.current.scrollTop = chatRef.current.scrollHeight
-    }
+    if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight
   }, [])
 
-  useEffect(() => {
-    scrollToBottom()
-  }, [messages, isTyping, scrollToBottom])
+  useEffect(() => { scrollToBottom() }, [messages, isTyping, scrollToBottom])
 
+  /* ── Effective stats (API or local optimistic) ── */
+  const effectiveStats = useMemo(() => localStats || stats, [localStats, stats])
+
+  /* ── Send message ── */
   const handleSend = useCallback((text: string) => {
     if (!text.trim() || isTyping) return
 
-    const userMsg: Message = { role: 'user', text: text.trim() }
-    setMessages((prev) => [...prev, userMsg])
+    const userMsg: ChatMsg = { role: 'user', text: text.trim() }
+    setPendingMessages((prev) => [...prev, userMsg])
     setInput('')
-    setShowSuggestions(false)
     setIsTyping(true)
 
-    // Try API first, fall back to local responses
-    const addResponse = (response: string) => {
-      const oracleMsg: Message = { role: 'oracle', text: response }
-      setIsTyping(false)
-      setMessages((prev) => {
-        setAnimatingIndex(prev.length)
-        return [...prev, oracleMsg]
-      })
-    }
+    api.chat(text.trim()).then((result) => {
+      const addResponse = (response: string) => {
+        const oracleMsg: ChatMsg = { role: 'oracle', text: response }
+        setIsTyping(false)
+        setPendingMessages((prev) => {
+          setAnimatingIndex(historyMessages.length + prev.length)
+          return [...prev, oracleMsg]
+        })
+        // Optimistically update stats
+        setLocalStats((prev) => {
+          const base = prev || stats
+          return { ...base, messages_sent: base.messages_sent + 1 }
+        })
+      }
 
-    api.chat(text).then((result) => {
       if (result?.text) {
         setTimeout(() => addResponse(result.text), 400 + Math.random() * 400)
       } else {
-        setTimeout(() => addResponse(getOracleResponse(text)), 800 + Math.random() * 700)
+        setTimeout(() => addResponse(
+          'The ancient runes are unclear. Try asking about your skills, career, or technologies.',
+        ), 800 + Math.random() * 500)
       }
     })
-  }, [isTyping])
+  }, [isTyping, stats, historyMessages.length])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -138,155 +268,233 @@ export default function Oracle() {
     }
   }, [input, handleSend])
 
+  /* ── Render ── */
   return (
-    <motion.div
-      variants={{
-        hidden: { opacity: 0 },
-        show: { opacity: 1, transition: { staggerChildren: 0.12, delayChildren: 0.05 } },
-      }}
-      initial="hidden"
-      animate="show"
-      className="flex h-[calc(100vh-6rem)] flex-col lg:h-[calc(100vh-5rem)]"
-    >
-      {/* Header */}
-      <motion.div
-        variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0, transition: { duration: 0.5 } } }}
-        className="mb-4"
-      >
-        <div className="flex items-center gap-3">
-          <h1
-            className="font-display text-3xl tracking-wide sm:text-4xl"
-            style={{
-              background: 'linear-gradient(135deg, #8b5cf6, #a78bfa, #c084fc)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              filter: 'drop-shadow(0 0 16px rgba(139, 92, 246, 0.3))',
-            }}
-          >
-            The Oracle
-          </h1>
-          <Sparkles
-            className="h-5 w-5 text-accent-purple"
-            style={{ animation: 'ember-float 2s ease-in-out infinite' }}
-          />
-        </div>
-        <p className="mt-1 font-body text-sm text-text-muted">
-          Your AI career advisor — powered by ancient wisdom
-        </p>
+    <motion.div variants={container} initial="hidden" animate="show" className="space-y-6 pb-8">
+      {/* ── Page Header ── */}
+      <PageHeader
+        title="The Oracle"
+        subtitle="Your AI career advisor — ancient wisdom for modern developers"
+        gradient="linear-gradient(135deg, #8b5cf6, #a78bfa, #c084fc)"
+        glowColor="rgba(139, 92, 246, 0.3)"
+      />
+
+      {/* ── Stats Bar ── */}
+      <motion.div variants={item} className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard icon={MessageCircle} label="Messages Sent" value={effectiveStats.messages_sent} color="#8b5cf6" />
+        <StatCard icon={Brain} label="Wisdom Score" value={effectiveStats.wisdom_score} color="#22c55e" />
+        <StatCard icon={Compass} label="Topics Explored" value={effectiveStats.topics_explored} color="#3b82f6" />
+        <StatCard icon={Star} label="Oracle Level" value={effectiveStats.oracle_level} color="#f0c040" />
       </motion.div>
 
-      {/* Chat area */}
-      <motion.div
-        variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0, transition: { duration: 0.5 } } }}
-        ref={chatRef}
-        className="mb-4 min-h-0 flex-1 overflow-y-auto rounded-xl border border-border-subtle/30 bg-bg-card/20 p-5 backdrop-blur-sm"
-        style={{
-          background: 'linear-gradient(180deg, rgba(139, 92, 246, 0.03) 0%, rgba(26, 26, 62, 0.3) 100%)',
-        }}
-      >
-        <div className="space-y-4">
-          {messages.map((msg, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-              className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
+      {/* ── Main Layout ── */}
+      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+        {/* ── Left: Chat Interface ── */}
+        <motion.div variants={item} className="flex flex-col">
+          <GlassCard
+            accentColor="rgba(139, 92, 246, 0.15)"
+            hover={false}
+            corners
+            className="flex flex-col"
+            style={{ height: 'calc(100vh - 22rem)', minHeight: '420px' }}
+          >
+            {/* Chat header */}
+            <div className="flex items-center gap-2 border-b border-border-subtle/20 px-5 py-3">
+              <div className="flex h-6 w-6 items-center justify-center rounded-md bg-accent-purple/15">
+                <Sparkles className="h-3 w-3 text-accent-purple" />
+              </div>
+              <span className="font-heading text-[10px] tracking-[0.3em] text-text-muted uppercase">
+                Oracle Chamber
+              </span>
+              {!statsLoading && (
+                <span className="ml-auto text-[10px] text-text-muted">
+                  Lv.{effectiveStats.oracle_level} — {effectiveStats.messages_sent} messages
+                </span>
+              )}
+            </div>
+
+            {/* Messages area */}
+            <div
+              ref={chatRef}
+              className="flex-1 space-y-4 overflow-y-auto p-5"
+              style={{
+                background: 'linear-gradient(180deg, rgba(139, 92, 246, 0.02) 0%, rgba(26, 26, 62, 0.15) 100%)',
+              }}
             >
-              {/* Avatar */}
-              <div
-                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
-                  msg.role === 'oracle'
-                    ? 'bg-accent-purple/15 text-accent-purple'
-                    : 'bg-accent-blue/15 text-accent-blue'
-                }`}
-              >
-                {msg.role === 'oracle' ? (
-                  <Sparkles className="h-4 w-4" />
-                ) : (
-                  <User className="h-4 w-4" />
-                )}
-              </div>
+              {messages.length === 0 && !isTyping && (
+                <div className="flex h-full items-center justify-center">
+                  <div className="text-center">
+                    <Scroll className="mx-auto mb-3 h-8 w-8 text-accent-purple/30" />
+                    <p className="text-xs text-text-muted">The Oracle awaits your questions...</p>
+                  </div>
+                </div>
+              )}
 
-              {/* Bubble */}
-              <div
-                className={`max-w-[80%] rounded-xl px-4 py-3 text-xs leading-relaxed ${
-                  msg.role === 'oracle'
-                    ? 'rounded-tl-sm border border-accent-purple/15 bg-accent-purple/5 text-text-secondary'
-                    : 'rounded-tr-sm border border-accent-blue/15 bg-accent-blue/5 text-text-secondary'
-                }`}
-              >
-                {msg.role === 'oracle' && i === animatingIndex ? (
-                  <TypewriterMessage
-                    text={msg.text}
-                    onComplete={() => setAnimatingIndex(-1)}
-                  />
-                ) : (
-                  msg.text
-                )}
-              </div>
-            </motion.div>
-          ))}
+              {messages.map((msg, i) => (
+                <MessageBubble
+                  key={msg.id || `msg-${i}`}
+                  msg={msg}
+                  isAnimating={i === animatingIndex}
+                  onAnimComplete={() => setAnimatingIndex(-1)}
+                />
+              ))}
 
-          {/* Typing indicator */}
-          <AnimatePresence>
-            {isTyping && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-              >
-                <TypingIndicator />
-              </motion.div>
+              <AnimatePresence>
+                {isTyping && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                  >
+                    <TypingIndicator />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Suggestion chips */}
+            <AnimatePresence>
+              {showSuggestions && messages.filter((m) => m.role === 'user').length === 0 && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="border-t border-border-subtle/20 px-5 py-3"
+                >
+                  <p className="mb-2 text-[10px] text-text-muted uppercase tracking-widest">Suggested</p>
+                  <div className="flex flex-wrap gap-2">
+                    {SUGGESTIONS.map(({ text: s, icon: SIcon }) => (
+                      <motion.button
+                        key={s}
+                        whileHover={{ scale: 1.03 }}
+                        whileTap={{ scale: 0.97 }}
+                        onClick={() => handleSend(s)}
+                        className="flex items-center gap-1.5 rounded-lg border border-accent-purple/20 bg-accent-purple/5 px-3 py-1.5 text-[11px] text-accent-purple/80 transition-colors hover:border-accent-purple/40 hover:bg-accent-purple/10 hover:text-accent-purple"
+                      >
+                        <SIcon className="h-3 w-3" />
+                        {s}
+                      </motion.button>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Input bar */}
+            <div className="border-t border-border-subtle/20 p-3">
+              <div className="flex items-center gap-3 rounded-xl border border-border-subtle/30 bg-bg-primary/30 px-4 py-2.5 transition-colors focus-within:border-accent-purple/30">
+                <input
+                  type="text"
+                  placeholder="Ask the Oracle a question..."
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  disabled={isTyping}
+                  className="flex-1 bg-transparent text-sm text-text-primary outline-none placeholder:text-text-muted disabled:opacity-50"
+                />
+                <button
+                  onClick={() => handleSend(input)}
+                  disabled={!input.trim() || isTyping}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent-purple/15 text-accent-purple transition-all hover:bg-accent-purple/25 disabled:opacity-30"
+                >
+                  <Send className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </GlassCard>
+        </motion.div>
+
+        {/* ── Right: Sidebar ── */}
+        <motion.div variants={item} className="space-y-4">
+          {/* Weekly Summary */}
+          <GlassCard accentColor="rgba(139, 92, 246, 0.15)" hover={false} corners className="p-5">
+            <div className="mb-4 flex items-center gap-2">
+              <Scroll className="h-4 w-4 text-accent-purple" />
+              <h3 className="font-heading text-[10px] tracking-[0.3em] text-text-muted uppercase">
+                Weekly Scroll
+              </h3>
+            </div>
+
+            <p className="mb-4 text-xs leading-relaxed text-text-secondary">
+              {weekly.summary}
+            </p>
+
+            {/* XP & Quests row */}
+            <div className="mb-3 grid grid-cols-2 gap-2">
+              <div className="rounded-lg border border-accent-gold/15 bg-accent-gold/5 px-3 py-2 text-center">
+                <p className="font-display text-lg text-accent-gold">
+                  +<AnimatedCounter value={weekly.xp_gained} duration={1} />
+                </p>
+                <p className="text-[9px] text-text-muted uppercase tracking-wider">XP Gained</p>
+              </div>
+              <div className="rounded-lg border border-accent-green/15 bg-accent-green/5 px-3 py-2 text-center">
+                <p className="font-display text-lg text-accent-green">
+                  <AnimatedCounter value={weekly.quests_completed} duration={0.8} />
+                </p>
+                <p className="text-[9px] text-text-muted uppercase tracking-wider">Quests Done</p>
+              </div>
+            </div>
+
+            {/* Skills practiced */}
+            {weekly.skills_practiced.length > 0 && (
+              <div className="mb-3">
+                <p className="mb-1.5 text-[9px] text-text-muted uppercase tracking-wider">Skills Practiced</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {weekly.skills_practiced.map((skill) => (
+                    <span
+                      key={skill}
+                      className="rounded-md border border-accent-purple/20 bg-accent-purple/5 px-2 py-0.5 text-[10px] text-accent-purple/80"
+                    >
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
             )}
-          </AnimatePresence>
-        </div>
-      </motion.div>
 
-      {/* Suggestions */}
-      <AnimatePresence>
-        {showSuggestions && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0, height: 0 }}
-            className="mb-3 flex flex-wrap gap-2"
-          >
-            {SUGGESTIONS.map((suggestion) => (
-              <button
-                key={suggestion}
-                onClick={() => handleSend(suggestion)}
-                className="rounded-lg border border-accent-purple/20 bg-accent-purple/5 px-3 py-1.5 text-[11px] text-accent-purple/80 transition-all hover:border-accent-purple/40 hover:bg-accent-purple/10 hover:text-accent-purple"
-              >
-                {suggestion}
-              </button>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
+            {/* Achievement progress */}
+            <div className="mb-3 rounded-lg border border-border-subtle/20 bg-bg-primary/20 px-3 py-2">
+              <p className="text-[9px] text-text-muted uppercase tracking-wider">Achievement Progress</p>
+              <p className="mt-0.5 text-xs text-text-secondary">{weekly.achievement_progress}</p>
+            </div>
 
-      {/* Input */}
-      <motion.div
-        variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0, transition: { duration: 0.5 } } }}
-        className="flex items-center gap-3 rounded-xl border border-border-subtle/40 bg-bg-card/30 p-3 backdrop-blur-sm transition-colors focus-within:border-accent-purple/30"
-      >
-        <input
-          type="text"
-          placeholder="Ask the Oracle a question..."
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          disabled={isTyping}
-          className="flex-1 bg-transparent text-sm text-text-primary outline-none placeholder:text-text-muted disabled:opacity-50"
-        />
-        <button
-          onClick={() => handleSend(input)}
-          disabled={!input.trim() || isTyping}
-          className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent-purple/15 text-accent-purple transition-colors hover:bg-accent-purple/25 disabled:opacity-30"
-        >
-          <Send className="h-4 w-4" />
-        </button>
-      </motion.div>
+            {/* Oracle tip */}
+            <div className="rounded-lg border border-accent-gold/15 bg-accent-gold/5 px-3 py-2.5">
+              <div className="mb-1 flex items-center gap-1.5">
+                <Sparkles className="h-3 w-3 text-accent-gold" />
+                <p className="text-[9px] font-semibold text-accent-gold uppercase tracking-wider">Oracle Tip</p>
+              </div>
+              <p className="text-[11px] leading-relaxed text-text-secondary">{weekly.oracle_tip}</p>
+            </div>
+          </GlassCard>
+
+          {/* Oracle Knowledge */}
+          <GlassCard accentColor="rgba(59, 130, 246, 0.15)" hover={false} corners className="p-5">
+            <div className="mb-3 flex items-center gap-2">
+              <BookOpen className="h-4 w-4 text-accent-blue" />
+              <h3 className="font-heading text-[10px] tracking-[0.3em] text-text-muted uppercase">
+                Oracle Knowledge
+              </h3>
+            </div>
+            <div className="space-y-2">
+              {ORACLE_TOPICS.map((topic) => (
+                <button
+                  key={topic.label}
+                  onClick={() => handleSend(`Tell me about my ${topic.label.toLowerCase()}`)}
+                  disabled={isTyping}
+                  className="group flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-accent-blue/5 disabled:opacity-50"
+                >
+                  <ChevronRight className="h-3 w-3 text-accent-blue/40 transition-transform group-hover:translate-x-0.5 group-hover:text-accent-blue/70" />
+                  <div>
+                    <p className="text-[11px] font-medium text-text-primary">{topic.label}</p>
+                    <p className="text-[9px] text-text-muted">{topic.desc}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </GlassCard>
+        </motion.div>
+      </div>
     </motion.div>
   )
 }

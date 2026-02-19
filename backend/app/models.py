@@ -67,3 +67,11 @@ class CVAnalysis(SQLModel, table=True):
     tips: str = ""  # JSON-serialized list
     sections: str = ""  # JSON-serialized list of {name, score, feedback}
     created_at: str  # ISO date string
+
+
+class ChatMessage(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    role: str  # "user" or "oracle"
+    text: str
+    context_topic: str = ""  # matched keyword, for analytics
+    created_at: str  # ISO date string

@@ -84,19 +84,183 @@ def analyze_cv(filename: str, file_size: int) -> dict:
     }
 
 
-def oracle_chat(message: str) -> str:
-    """Mock: Oracle chatbot responses."""
-    responses = {
-        "default": "The Oracle senses great potential in your journey. Keep pushing forward, adventurer.",
-        "skills": "Your skill tree reveals a balanced path. Consider deepening your expertise in one area.",
-        "career": "The stars align for growth. Focus on building projects that showcase your unique abilities.",
+def oracle_chat(message: str, profile: dict | None = None, skills: list | None = None) -> dict:
+    """Mock: context-aware Oracle chatbot responses.
+
+    When profile/skills data is provided, responses reference actual
+    player stats and skill levels for immersion.
+    Returns dict with 'text' (response) and 'topic' (matched keyword).
+    """
+    p = profile or {}
+    name = p.get("name", "adventurer")
+    level = p.get("level", 15)
+    wis = p.get("wisdom", 70)
+    int_ = p.get("intelligence", 88)
+    str_ = p.get("strength", 72)
+    dex = p.get("dexterity", 65)
+
+    def _skill_level(skill_name: str) -> str:
+        if skills:
+            for s in skills:
+                if s["name"].lower() == skill_name.lower() and s.get("unlocked"):
+                    return f"Level {s['level']}/{s['max_level']}"
+        return "unknown level"
+
+    responses: dict[str, tuple[str, str]] = {
+        "improve": (
+            f"I sense great potential in your skill tree, {name}. Focus on deepening your backend expertise — "
+            f"it will unlock the Full-Stack Paladin class. Your current STR is {str_}/100; contributing to "
+            "2-3 more open source projects would boost it significantly.",
+            "improve",
+        ),
+        "skill": (
+            f"Your Frontend Arcana is strong — React at {_skill_level('React')}. To reach mastery, "
+            "explore Server Components and advanced hooks. For Backend Warfare, consider Docker — "
+            "it will unlock container orchestration abilities.",
+            "skills",
+        ),
+        "learn": (
+            "The ancient scrolls suggest these paths: 1) Machine Learning fundamentals for the Data Sorcery branch, "
+            "2) Cloud Architecture (AWS/GCP) for deployment mastery, 3) System Design patterns to unlock the Architect class.",
+            "learn",
+        ),
+        "profile": (
+            f"Your developer profile radiates a combined power level of {level}. You are classified as a "
+            f"{p.get('title', 'Full-Stack Mage')}. Strongest attributes: INT ({int_}) and STR ({str_}). "
+            f"Weakest area: DEX ({dex}) — focus on adaptability and new frameworks.",
+            "profile",
+        ),
+        "project": (
+            "Your most impressive quest is DevQuest Portfolio (Legendary rarity). To boost your quest log, "
+            "consider starting a project combining AI with your React skills — perhaps an intelligent code review tool.",
+            "project",
+        ),
+        "career": (
+            f"The stars align for a Senior Developer path, {name}. Your diverse skill set across frontend, "
+            "backend, and data puts you in a strong position. Consider specializing in one area while maintaining breadth. "
+            f"Technical leadership roles await at Level {level + 5}.",
+            "career",
+        ),
+        "github": (
+            "Your GitHub presence shows active repositories with growing stars. To increase visibility: "
+            "1) Write detailed READMEs, 2) Add live demos, 3) Contribute to trending repos in your stack.",
+            "github",
+        ),
+        "react": (
+            f"React is one of your strongest abilities at {_skill_level('React')}. To reach mastery: "
+            "explore React Server Components, master advanced hooks patterns, and build a complex state "
+            "management solution without external libraries.",
+            "react",
+        ),
+        "python": (
+            f"Your Python mastery is at {_skill_level('Python')} — impressive! Consider diving into "
+            "async Python with asyncio, explore FastAPI middleware patterns, and contribute to the Python ecosystem.",
+            "python",
+        ),
+        "hello": (
+            f"Greetings, {name}! I am the Oracle of DevQuest, keeper of ancient coding wisdom. "
+            "Ask me about your skills, career path, projects, or how to level up your developer profile.",
+            "greeting",
+        ),
+        "help": (
+            "I can advise you on: skill progression, career path recommendations, project ideas, "
+            "GitHub optimization, specific technologies (React, Python, etc.), and your overall level assessment. "
+            "What interests you?",
+            "help",
+        ),
+        "strength": (
+            f"Your STR (Problem Solving) is at {str_}/100. To boost it: tackle harder algorithmic challenges, "
+            "contribute to complex open-source projects, and practice system design interviews.",
+            "strength",
+        ),
+        "intelligence": (
+            f"Your INT (Technical Knowledge) is at {int_}/100 — your highest stat! Keep it sharp by "
+            "staying current with new technologies and deepening your understanding of CS fundamentals.",
+            "intelligence",
+        ),
+        "wisdom": (
+            f"Your WIS (Soft Skills) is at {wis}/100. Improve it by mentoring junior developers, "
+            "writing technical blog posts, and practicing your presentation skills at meetups.",
+            "wisdom",
+        ),
+        "dexterity": (
+            f"Your DEX (Adaptability) is at {dex}/100 — your lowest stat. Boost it by learning a new "
+            "framework each quarter, experimenting with unfamiliar paradigms, and taking on varied project types.",
+            "dexterity",
+        ),
+        "level": (
+            f"You are currently Level {level} with {p.get('xp', 6450)} XP. "
+            f"You need {p.get('xp_next_level', 10000) - p.get('xp', 6450)} more XP to reach Level {level + 1}. "
+            "Complete quests, earn achievements, and master new skills to level up faster.",
+            "level",
+        ),
+        "achievement": (
+            "Achievements unlock as you reach milestones. Focus on: completing projects (Quest Master), "
+            "fixing bugs (Bug Hunter), maintaining code quality (Shield Bearer), and learning new languages (Polyglot).",
+            "achievement",
+        ),
+        "frontend": (
+            f"Your Frontend Arcana branch: React at {_skill_level('React')}, "
+            f"TypeScript at {_skill_level('TypeScript')}, Tailwind at {_skill_level('Tailwind CSS')}. "
+            "Consider unlocking Next.js to round out this branch.",
+            "frontend",
+        ),
+        "backend": (
+            f"Your Backend Warfare branch: Python at {_skill_level('Python')}, "
+            f"FastAPI at {_skill_level('FastAPI')}, Node.js at {_skill_level('Node.js')}. "
+            "Docker remains locked — consider prioritizing it for deployment mastery.",
+            "backend",
+        ),
+        "data": (
+            f"Your Data Sorcery branch: Pandas at {_skill_level('Pandas')}, "
+            f"PostgreSQL at {_skill_level('PostgreSQL')}. Machine Learning is still locked — "
+            f"it requires Level 18 (you're at {level}).",
+            "data",
+        ),
+        "recommend": (
+            "Based on your current stats, I recommend: 1) Unlock Docker to complete Backend Warfare, "
+            "2) Push React to Level 5 for Frontend mastery, 3) Start building ML fundamentals for the Data Sorcery endgame.",
+            "recommendation",
+        ),
+        "week": (
+            "This week, focus on one concrete goal: ship a feature, write a blog post, or close 5 issues. "
+            "Small consistent progress compounds faster than sporadic big pushes.",
+            "weekly",
+        ),
     }
-    for key in responses:
-        if key in message.lower():
-            return responses[key]
-    return responses["default"]
+
+    lower = message.lower()
+    for keyword, (text, topic) in responses.items():
+        if keyword in lower:
+            return {"text": text, "topic": topic}
+
+    return {
+        "text": f"The ancient runes are unclear on this matter, {name}. Try asking about your skills, "
+                "career path, projects, or specific technologies like React and Python.",
+        "topic": "unknown",
+    }
 
 
-def weekly_summary() -> str:
-    """Mock: generate weekly activity summary."""
-    return "This week you completed 3 quests, gained 450 XP, and unlocked the 'Consistent Coder' badge."
+def weekly_summary(profile: dict | None = None) -> dict:
+    """Mock: generate structured weekly activity summary."""
+    p = profile or {}
+    level = p.get("level", 15)
+    wis = p.get("wisdom", 70)
+
+    tip_pool = [
+        f"Your WIS is {wis}/100 — try mentoring someone this week to boost it.",
+        "Focus on completing one quest from start to finish this week.",
+        f"At Level {level}, you're close to unlocking new abilities. Push for that next level!",
+        "Consider writing a technical blog post — it boosts both WIS and community visibility.",
+    ]
+    tip = tip_pool[level % len(tip_pool)]
+
+    return {
+        "summary": f"This week you completed 3 quests, gained 450 XP, and unlocked the 'Consistent Coder' badge. "
+                   f"Your Level {level} profile continues to grow stronger.",
+        "xp_gained": 450,
+        "quests_completed": 3,
+        "skills_practiced": ["React", "Python", "SQL"],
+        "achievement_progress": "Consistent Coder — 5/7 days",
+        "oracle_tip": tip,
+    }

@@ -179,6 +179,36 @@ export interface BlogPostCreate {
   pinned?: boolean
 }
 
+export interface OracleMessage {
+  id: number
+  role: string
+  text: string
+  created_at: string
+}
+
+export interface OracleHistoryResponse {
+  messages: OracleMessage[]
+  total: number
+  has_more: boolean
+}
+
+export interface OracleStatsResponse {
+  messages_sent: number
+  wisdom_score: number
+  topics_explored: number
+  oracle_level: number
+}
+
+export interface OracleWeeklySummaryResponse {
+  summary: string
+  xp_gained: number
+  quests_completed: number
+  skills_practiced: string[]
+  achievement_progress: string
+  oracle_tip: string
+  total_messages: number
+}
+
 // API functions
 export const api = {
   // Gamification
@@ -218,6 +248,10 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ message }),
     }),
+  getOracleHistory: (limit = 50, offset = 0) =>
+    fetchAPI<OracleHistoryResponse>(`/oracle/history?limit=${limit}&offset=${offset}`),
+  getOracleStats: () => fetchAPI<OracleStatsResponse>('/oracle/stats'),
+  getOracleWeeklySummary: () => fetchAPI<OracleWeeklySummaryResponse>('/oracle/weekly-summary'),
 
   // Blog
   getBlogPosts: () => fetchAPI<BlogPostsResponse>('/blog/posts'),

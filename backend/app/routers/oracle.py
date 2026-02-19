@@ -1,38 +1,133 @@
-"""Oracle chat mock endpoint — mirrors Oracle.tsx RESPONSES."""
+"""Oracle chat endpoints — DB-persisted chat with context-aware mock AI."""
 
-from fastapi import APIRouter
+from datetime import datetime, timezone
+
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
+from sqlmodel import Session, col, func, select
+
+from app.database import get_session
+from app.models import ChatMessage, PlayerProfile, Skill
+from app.services.mock_ai import oracle_chat, weekly_summary
 
 router = APIRouter(prefix="/oracle", tags=["oracle"])
 
 
-class ChatMessage(BaseModel):
+class ChatRequest(BaseModel):
     message: str
 
 
-# Exact mirror of Oracle.tsx RESPONSES (lines 12-24)
-RESPONSES: dict[str, str] = {
-    "improve": "I sense great potential in your skill tree. Focus on deepening your backend expertise — it will unlock the Full-Stack Paladin class. Contributing to 2-3 more open source projects would earn you the \"Community Champion\" badge.",
-    "skill": "Your Frontend Arcana is strong at Level 78. To reach mastery, I recommend exploring Next.js and server-side rendering. For Backend Warfare, consider learning Docker — it will unlock container orchestration abilities.",
-    "learn": "The ancient scrolls suggest these paths: 1) Machine Learning fundamentals for the Data Sorcery branch, 2) Cloud Architecture (AWS/GCP) for deployment mastery, 3) System Design patterns to unlock the Architect class.",
-    "profile": "Your developer profile radiates a combined power level of 6,450 XP. You are classified as a Full-Stack Mage, Level 15. Your strongest attributes are INT (88) and STR (72). The weakest area is DEX (65) — focus on adaptability and new frameworks.",
-    "project": "Your most impressive quest is DevQuest Portfolio (Legendary rarity, 92/100 score). To boost your quest log further, consider starting a project that combines AI with your existing React skills — perhaps an intelligent code review tool.",
-    "career": "The stars align for a Senior Developer path. Your diverse skill set across frontend, backend, and data puts you in a strong position. Consider specializing in one area while maintaining breadth. Technical leadership roles await at Level 20.",
-    "github": "Your GitHub presence shows 6 active repositories with 177 combined stars. To increase visibility: 1) Write detailed READMEs, 2) Add live demos, 3) Contribute to trending repositories in your tech stack.",
-    "react": "React is one of your strongest abilities at Level 4/5. To reach mastery: explore React Server Components, master advanced hooks patterns, and build a complex state management solution without external libraries.",
-    "python": "Your Python mastery is at Level 4/5 — impressive! Consider diving into async Python with asyncio, explore FastAPI middleware patterns, and contribute to the Python ecosystem with a published package.",
-    "hello": "Greetings, brave adventurer! I am the Oracle of DevQuest, keeper of ancient coding wisdom. Ask me about your skills, career path, projects, or how to level up your developer profile.",
-    "help": "I can advise you on: your skill progression, career path recommendations, project ideas, GitHub profile optimization, specific technologies (React, Python, etc.), and your overall developer level assessment. What interests you?",
-}
+def _get_profile_dict(session: Session) -> dict | None:
+    profile = session.exec(select(PlayerProfile)).first()
+    if not profile:
+        return None
+    return {
+        "name": profile.name,
+        "title": profile.title,
+        "level": profile.level,
+        "xp": profile.xp,
+        "xp_next_level": profile.xp_next_level,
+        "strength": profile.strength,
+        "intelligence": profile.intelligence,
+        "dexterity": profile.dexterity,
+        "wisdom": profile.wisdom,
+    }
 
-DEFAULT_RESPONSE = "The ancient runes are unclear on this matter. Try asking about your skills, career path, projects, or specific technologies like React and Python. I can also analyze your profile and suggest improvements."
+
+def _get_skills_list(session: Session) -> list[dict]:
+    skills = session.exec(select(Skill)).all()
+    return [
+        {"name": s.name, "level": s.level, "max_level": s.max_level, "unlocked": s.unlocked}
+        for s in skills
+    ]
 
 
 @router.post("/chat")
-async def chat(msg: ChatMessage):
-    """Process chat message and return mock Oracle response."""
-    text = msg.message.lower()
-    for keyword, response in RESPONSES.items():
-        if keyword in text:
-            return {"role": "oracle", "text": response}
-    return {"role": "oracle", "text": DEFAULT_RESPONSE}
+async def chat(req: ChatRequest, session: Session = Depends(get_session)):
+    """Process chat message with context-aware Oracle and persist both sides."""
+    now = datetime.now(timezone.utc).isoformat()
+
+    # Persist user message
+    user_msg = ChatMessage(role="user", text=req.message, context_topic="", created_at=now)
+    session.add(user_msg)
+
+    # Get context from DB for richer responses
+    profile = _get_profile_dict(session)
+    skills = _get_skills_list(session)
+
+    # Generate Oracle response
+    result = oracle_chat(req.message, profile=profile, skills=skills)
+
+    # Persist Oracle response
+    oracle_msg = ChatMessage(
+        role="oracle", text=result["text"], context_topic=result["topic"], created_at=now,
+    )
+    session.add(oracle_msg)
+    session.commit()
+
+    return {"role": "oracle", "text": result["text"], "topic": result["topic"]}
+
+
+@router.get("/history")
+async def get_history(
+    limit: int = 50, offset: int = 0, session: Session = Depends(get_session),
+):
+    """Return paginated chat history in chronological order."""
+    total = session.exec(select(func.count(ChatMessage.id))).one()
+
+    messages = session.exec(
+        select(ChatMessage)
+        .order_by(col(ChatMessage.id).asc())
+        .offset(offset)
+        .limit(limit)
+    ).all()
+
+    return {
+        "messages": [
+            {"id": m.id, "role": m.role, "text": m.text, "created_at": m.created_at}
+            for m in messages
+        ],
+        "total": total,
+        "has_more": offset + limit < total,
+    }
+
+
+@router.get("/stats")
+async def get_stats(session: Session = Depends(get_session)):
+    """Oracle stats for the stats bar."""
+    user_count = session.exec(
+        select(func.count(ChatMessage.id)).where(ChatMessage.role == "user")
+    ).one()
+
+    # Unique topics explored
+    topics = session.exec(
+        select(ChatMessage.context_topic)
+        .where(ChatMessage.role == "oracle")
+        .where(ChatMessage.context_topic != "")
+    ).all()
+    unique_topics = len(set(topics))
+
+    # Wisdom from profile
+    profile = session.exec(select(PlayerProfile)).first()
+    wisdom_score = profile.wisdom if profile else 70
+
+    # Oracle level: 1 + messages/5, capped at 20
+    oracle_level = min(1 + user_count // 5, 20)
+
+    return {
+        "messages_sent": user_count,
+        "wisdom_score": wisdom_score,
+        "topics_explored": unique_topics,
+        "oracle_level": oracle_level,
+    }
+
+
+@router.get("/weekly-summary")
+async def get_weekly(session: Session = Depends(get_session)):
+    """Structured weekly summary with Oracle insights."""
+    profile = _get_profile_dict(session)
+    summary = weekly_summary(profile=profile)
+
+    total = session.exec(select(func.count(ChatMessage.id))).one()
+    summary["total_messages"] = total
+    return summary
