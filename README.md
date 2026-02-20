@@ -44,8 +44,9 @@
 
 ## 🔗 Links da Entrega
 
-- **Endpoint publico (Frontend):** `https://SEU-FRONTEND.vercel.app` *(substituir antes da entrega)*
-- **Endpoint publico (API):** `https://SUA-API.railway.app` *(substituir antes da entrega)*
+- **Endpoint publico (Frontend):** `https://maib.com.br`
+- **Endpoint publico (API/Health):** `https://maib.com.br/api/health`
+- **Backend origin (Railway):** `https://maibia-production.up.railway.app/api/health`
 - **Repositorio GitHub:** `https://github.com/HiRenan/MAIBIA`
 - **LinkedIn:** `https://www.linkedin.com/in/renan-mocelin-br/`
 - **GitHub (perfil):** `https://github.com/HiRenan`
@@ -516,6 +517,7 @@ Acentos:     Versoes ajustadas para fundo claro
 ## 📡 API — Endpoints
 
 Base URL: `http://localhost:8000/api`
+Base URL (producao): `https://maib.com.br/api`
 Documentacao interativa: `http://localhost:8000/docs`
 
 ### Health
@@ -718,6 +720,7 @@ Health: **http://localhost:8000/api/health**
 | `FRONTEND_URL` | `http://localhost:5173` | URL do frontend (CORS) |
 | `DB_PATH` | `data` | Diretorio do SQLite (`<DB_PATH>/devquest.db`) |
 | `VITE_API_URL` | `/api` | Base URL da API no frontend |
+| `RAILWAY_BACKEND_URL` | `https://maibia-production.up.railway.app` | Backend alvo usado pela funcao proxy da Vercel |
 
 ### Workflow Tipico
 
@@ -768,6 +771,7 @@ Configuracao em `frontend/vercel.json`:
 ```json
 {
   "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/proxy?path=$1" },
     { "source": "/((?!api).*)", "destination": "/index.html" }
   ]
 }
@@ -776,7 +780,9 @@ Configuracao em `frontend/vercel.json`:
 - Build command: `npm run build`
 - Output directory: `dist`
 - Framework preset: Vite
-- Variavel: `VITE_API_URL` apontando para URL do Railway
+- Variavel: `VITE_API_URL=/api`
+- Variavel: `RAILWAY_BACKEND_URL=https://maibia-production.up.railway.app`
+- Arquivo: `frontend/api/proxy.js` faz proxy de `/api/*` para o backend Railway
 
 ### Backend — Railway
 
@@ -786,7 +792,7 @@ Configuracao em `backend/Procfile`:
 web: uvicorn app.main:app --host 0.0.0.0 --port $PORT
 ```
 
-- Variavel: `FRONTEND_URL` apontando para URL do Vercel
+- Variavel: `FRONTEND_URL=https://maib.com.br`
 
 ### Nota sobre SQLite Ephemeral
 
