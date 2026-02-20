@@ -303,7 +303,7 @@ function CategoryFilters({
             onClick={() => onChange(cat.key)}
             className="relative flex items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-medium tracking-wide transition-all duration-200"
             style={{
-              borderColor: isActive ? `${cat.color}60` : 'rgba(42, 42, 90, 0.4)',
+              borderColor: isActive ? `${cat.color}60` : 'var(--color-surface-dim)',
               backgroundColor: isActive ? `${cat.color}12` : 'transparent',
               color: isActive ? cat.color : '#94a3b8',
             }}
@@ -474,7 +474,7 @@ function TimelineCard({
           ? `${entry.color}50`
           : isAward
             ? `${entry.color}35`
-            : 'rgba(42, 42, 90, 0.3)',
+            : 'var(--color-surface-dim)',
         boxShadow: isCurrent
           ? `0 0 20px ${entry.color}15, inset 0 1px 0 ${entry.color}15`
           : isAward
@@ -742,9 +742,9 @@ export default function Chronicle() {
       {/* Category Filters */}
       <CategoryFilters active={activeCategory} onChange={setActiveCategory} />
 
-      <div className="grid gap-10 lg:grid-cols-5">
+      <div className="grid gap-6 md:gap-10 md:grid-cols-3 lg:grid-cols-5">
         {/* Timeline Column */}
-        <div className="lg:col-span-3" ref={timelineRef}>
+        <div className="md:col-span-2 lg:col-span-3" ref={timelineRef}>
           <div className="relative">
             {/* Desktop: animated vertical progress line */}
             <div className="absolute top-0 bottom-0 left-1/2 hidden -translate-x-1/2 md:block">
@@ -802,7 +802,7 @@ export default function Chronicle() {
         </div>
 
         {/* Sidebar */}
-        <div className="space-y-8 lg:col-span-2">
+        <div className="space-y-8 md:col-span-1 lg:col-span-2">
           {/* Skills Cloud */}
           <SkillsCloud entries={data.entries} />
         </div>

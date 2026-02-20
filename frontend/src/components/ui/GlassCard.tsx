@@ -25,7 +25,7 @@ const GlassCard = forwardRef<HTMLDivElement, GlassCardProps>(
     return (
       <motion.div
         ref={ref}
-        className={`relative overflow-hidden rounded-xl border border-border-subtle/40 bg-bg-card/30 backdrop-blur-sm ${className}`}
+        className={`relative overflow-hidden rounded-xl border border-[var(--color-glass-border)] bg-[var(--color-glass-bg)] backdrop-blur-sm ${className}`}
         whileHover={hover ? { y: -4, transition: { duration: 0.2 } } : undefined}
         style={{
           boxShadow: glow ? `0 4px 24px -4px ${accentColor}` : undefined,

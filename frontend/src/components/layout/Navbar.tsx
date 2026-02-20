@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'motion/react'
+import { useGamification } from '../../contexts/GamificationContext'
+import { useTheme } from '../../contexts/ThemeContext'
 import {
   Swords,
   GitBranch,
@@ -12,6 +14,8 @@ import {
   Menu,
   X,
   Shield,
+  Sun,
+  Moon,
 } from 'lucide-react'
 
 const NAV_ITEMS = [
@@ -40,6 +44,7 @@ function OrnamentalDivider() {
 
 function XPBar() {
   const [profileData, setProfileData] = useState({ level: 15, xp: 6450, xp_next_level: 10000 })
+  const { profileVersion } = useGamification()
 
   useEffect(() => {
     fetch((import.meta.env.VITE_API_URL || '/api') + '/gamification/profile')
@@ -48,7 +53,7 @@ function XPBar() {
         if (d.level) setProfileData({ level: d.level, xp: d.xp, xp_next_level: d.xp_next_level })
       })
       .catch(() => {})
-  }, [])
+  }, [profileVersion])
 
   const xp = (profileData.xp / profileData.xp_next_level) * 100
 
@@ -95,6 +100,33 @@ function XPBar() {
           />
         </div>
       </div>
+    </div>
+  )
+}
+
+function ThemeToggle() {
+  const { toggleTheme, isDark } = useTheme()
+  return (
+    <div className="px-4 pb-2">
+      <button
+        onClick={toggleTheme}
+        className="group flex w-full items-center gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-bg-card/40"
+      >
+        <motion.div
+          className="flex h-8 w-8 items-center justify-center rounded-md bg-bg-card/40"
+          animate={{ rotate: isDark ? 0 : 180 }}
+          transition={{ duration: 0.3 }}
+        >
+          {isDark ? (
+            <Moon className="h-4 w-4 text-accent-gold" />
+          ) : (
+            <Sun className="h-4 w-4 text-accent-gold" />
+          )}
+        </motion.div>
+        <span className="font-heading text-[11px] tracking-wider text-text-muted">
+          {isDark ? 'Dark Realm' : 'Light Realm'}
+        </span>
+      </button>
     </div>
   )
 }
@@ -285,6 +317,9 @@ export default function Navbar() {
         </div>
 
         <OrnamentalDivider />
+
+        {/* Theme toggle */}
+        <ThemeToggle />
 
         {/* XP bar at bottom */}
         <XPBar />

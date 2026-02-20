@@ -1372,7 +1372,7 @@ export default function QuestLog() {
                 <p className="text-sm text-text-muted">No quests found matching your filters.</p>
               </div>
             ) : viewMode === 'grid' ? (
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <AnimatePresence mode="popLayout">
                   {filteredQuests.map((quest, i) => (
                     <QuestCardGrid

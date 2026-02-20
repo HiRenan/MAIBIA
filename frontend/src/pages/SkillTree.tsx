@@ -460,7 +460,7 @@ function AnimatedLine({ x1, y1, x2, y2, color, unlocked, delay, highlighted }: {
   return (
     <motion.line
       x1={x1} y1={y1} x2={x2} y2={y2}
-      stroke={unlocked ? color : 'rgba(42, 42, 90, 0.4)'}
+      stroke={unlocked ? color : 'var(--color-surface-dim)'}
       strokeWidth={highlighted ? 3 : unlocked ? 2 : 1}
       strokeDasharray={length}
       initial={{ strokeDashoffset: length }}
@@ -538,8 +538,8 @@ function TreeNode({ x, y, skill, color, delay, onClick, isSelected, isHovered, o
       {/* Background circle */}
       <motion.circle
         cx={x} cy={y} r={radius}
-        fill={skill.unlocked ? `${color}15` : 'rgba(18, 18, 42, 0.7)'}
-        stroke={isSelected ? '#fff' : skill.unlocked ? color : 'rgba(42, 42, 90, 0.6)'}
+        fill={skill.unlocked ? `${color}15` : 'var(--color-glass-bg)'}
+        stroke={isSelected ? '#fff' : skill.unlocked ? color : 'var(--color-surface-dim)'}
         strokeWidth={isSelected ? 2.5 : skill.unlocked ? 1.5 : 1}
         animate={{
           r: isHovered ? radius + 3 : radius,
@@ -915,8 +915,8 @@ function MobileSkillList({ branches, selectedSkill, onSelect, activeBranch }: {
                           <div
                             className="flex h-7 w-7 items-center justify-center rounded-md"
                             style={{
-                              backgroundColor: skill.unlocked ? `${branch.color}12` : 'rgba(26, 26, 62, 0.4)',
-                              border: `1px solid ${skill.unlocked ? `${branch.color}25` : 'rgba(42, 42, 90, 0.4)'}`,
+                              backgroundColor: skill.unlocked ? `${branch.color}12` : 'var(--color-glass-bg)',
+                              border: `1px solid ${skill.unlocked ? `${branch.color}25` : 'var(--color-surface-dim)'}`,
                             }}
                           >
                             {skill.unlocked ? (
@@ -1071,7 +1071,7 @@ export default function SkillTree() {
                   key={r}
                   cx={cx} cy={CENTER_Y} r={r}
                   fill="none"
-                  stroke="rgba(42, 42, 90, 0.08)"
+                  stroke="var(--color-surface-dim)"
                   strokeWidth={0.5}
                   strokeDasharray="4 8"
                 />
