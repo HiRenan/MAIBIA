@@ -3,12 +3,15 @@ export const config = {
 }
 
 const BACKEND_BASE_URL = 'https://maibia-production.up.railway.app'
+const TARGET_ORIGIN = (
+  process.env.RAILWAY_BACKEND_URL || BACKEND_BASE_URL
+).replace(/\/+$/, '')
 
 export default async function handler(request) {
   const incomingUrl = new URL(request.url)
   const proxiedPath = incomingUrl.pathname.replace(/^\/api\/?/, '')
   const targetUrl = new URL(
-    `${BACKEND_BASE_URL}/api/${proxiedPath}${incomingUrl.search}`
+    `${TARGET_ORIGIN}/api/${proxiedPath}${incomingUrl.search}`
   )
 
   const headers = new Headers()
