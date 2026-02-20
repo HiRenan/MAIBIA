@@ -15,7 +15,7 @@
   <img src="https://img.shields.io/badge/SQLite-3-003B57?style=for-the-badge&logo=sqlite&logoColor=white" alt="SQLite" />
 </p>
 
-**Aluno:** Renan Carvalho
+**Aluno:** Renan Mocelin
 **Disciplina:** IA Generativa — Avaliacao Intermediaria
 **Entrega:** 20/02/2026
 
@@ -23,6 +23,7 @@
 
 ## Sumario
 
+- [Links da Entrega](#-links-da-entrega)
 - [Sobre o Projeto](#-sobre-o-projeto)
 - [Telas do Sistema](#-telas-do-sistema)
 - [Stack Tecnica](#-stack-tecnica)
@@ -38,6 +39,19 @@
 - [O que Funcionou / Desafios](#-o-que-funcionou--desafios)
 - [Documentacao do Agente](#-documentacao-do-agente)
 - [Licenca](#-licenca)
+
+---
+
+## 🔗 Links da Entrega
+
+- **Endpoint publico (Frontend):** `https://SEU-FRONTEND.vercel.app` *(substituir antes da entrega)*
+- **Endpoint publico (API):** `https://SUA-API.railway.app` *(substituir antes da entrega)*
+- **Repositorio GitHub:** `https://github.com/HiRenan/MAIBIA`
+- **LinkedIn:** `https://www.linkedin.com/in/renan-mocelin-br/`
+- **GitHub (perfil):** `https://github.com/HiRenan`
+- **Dev.to:** `https://dev.to/hirenan`
+
+> Para avaliacao da aula, o item mais importante e o **endpoint publico funcionando**.
 
 ---
 
@@ -895,6 +909,29 @@ O Claude Code foi utilizado para:
 - Construir gamification engine (XP, levels, achievements, stats)
 - Gerar seed data e modelos de banco de dados
 - Configurar deploy (Vercel + Railway)
+
+### Prompts Reais Usados (exemplos)
+
+1. `Crie uma pagina Skill Tree RPG com 3 branches, 15 skills, animacoes e fallback de dados.`
+Resultado: estrutura inicial da tela, layout e estados principais.
+
+2. `Refatore para integrar com API FastAPI mantendo graceful degradation com dados mock.`
+Resultado: padrao `useAPI(fetcher, fallback)` aplicado nas paginas com fallback consistente.
+
+3. `Implemente backend FastAPI com routers github/cv/oracle/gamification e SQLite via SQLModel.`
+Resultado: API completa com persistencia, seed e endpoints de integracao frontend-backend.
+
+4. `Adicione sistema de gamificacao com XP, level-up, achievements dinamicos e activity log.`
+Resultado: `gamification_engine.py` com progressao de XP, desbloqueios e recalculo de stats.
+
+5. `Melhore UX e design com tema RPG, dark/light toggle e animacoes sem quebrar responsividade.`
+Resultado: polimento visual, toasts/modais e ajustes para mobile/tablet.
+
+### O que exigiu intervencao manual
+
+- Ajustes finos de responsividade e contraste em componentes especificos.
+- Correcao e centralizacao de links sociais para evitar divergencia.
+- Revisao de consistencia do README com o estado real do codigo.
 
 ### Metricas
 
