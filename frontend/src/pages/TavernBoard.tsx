@@ -1,4 +1,4 @@
-import { useRef, useState, useMemo, useCallback, type MouseEvent } from 'react'
+import { useRef, useState, useMemo, useCallback } from 'react'
 import { motion, useInView, AnimatePresence } from 'motion/react'
 import {
   Plus,
@@ -424,14 +424,6 @@ function PostCard({
 function SocialLinksPanel() {
   const ref = useRef<HTMLDivElement>(null)
   const isInView = useInView(ref, { once: true, margin: '-30px' })
-  const handleSocialLinkClick = useCallback(
-    (event: MouseEvent<HTMLAnchorElement>, url: string) => {
-      event.preventDefault()
-      const opened = window.open(url, '_blank', 'noopener,noreferrer')
-      if (!opened) window.location.assign(url)
-    },
-    []
-  )
 
   return (
     <motion.div
@@ -449,7 +441,6 @@ function SocialLinksPanel() {
             key={link.name}
             href={link.url}
             aria-label={link.ariaLabel}
-            onClick={(event) => handleSocialLinkClick(event, link.url)}
             target="_blank"
             rel="noopener noreferrer"
             className="group flex items-center gap-3 rounded-lg border border-border-subtle/30 bg-bg-card/20 px-4 py-3 transition-all duration-200 hover:border-border-subtle/50 hover:bg-bg-card/40"

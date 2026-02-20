@@ -9,19 +9,16 @@ const TARGET_ORIGIN = (
 
 export default async function handler(request) {
   const incomingUrl = new URL(request.url)
-  const proxiedPath = incomingUrl.pathname.replace(/^\/api\/?/, '')
-  const targetUrl = new URL(
-    `${TARGET_ORIGIN}/api/${proxiedPath}${incomingUrl.search}`
-  )
+  const proxiedPath = incomingUrl.searchParams.get('path') || ''
+  const targetUrl = new URL(`${TARGET_ORIGIN}/api/${proxiedPath}`)
 
-  const headers = new Headers()
-  const accept = request.headers.get('accept')
-  const contentType = request.headers.get('content-type')
-  const authorization = request.headers.get('authorization')
+  incomingUrl.searchParams.forEach((value, key) => {
+    if (key !== 'path') targetUrl.searchParams.append(key, value)
+  })
 
-  if (accept) headers.set('accept', accept)
-  if (contentType) headers.set('content-type', contentType)
-  if (authorization) headers.set('authorization', authorization)
+  const headers = new Headers(request.headers)
+  headers.delete('host')
+  headers.delete('content-length')
 
   const response = await fetch(targetUrl.toString(), {
     method: request.method,
