@@ -8,6 +8,7 @@ from sqlmodel import Session, select
 
 from app.database import get_session
 from app.models import CVAnalysis
+from app.services.gamification_engine import award_xp
 from app.services.mock_ai import analyze_cv
 
 router = APIRouter(prefix="/cv", tags=["cv"])
@@ -54,7 +55,12 @@ async def upload_cv(
     session.commit()
     session.refresh(record)
 
-    return _format_analysis(record)
+    # Award XP for CV analysis
+    gamification = award_xp(session, "cv_upload", f"Analyzed CV: {filename}", 100)
+
+    result_data = _format_analysis(record)
+    result_data["gamification"] = gamification
+    return result_data
 
 
 @router.get("/analysis")

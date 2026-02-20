@@ -90,9 +90,21 @@ export interface ReposResponse {
   source: string
 }
 
+export interface GamificationEvent {
+  xp_gained: number
+  new_xp: number
+  new_level: number
+  xp_next_level: number
+  leveled_up: boolean
+  old_level?: number
+  new_achievements: AchievementData[]
+}
+
 export interface ChatResponse {
   role: string
   text: string
+  topic?: string
+  gamification?: GamificationEvent
 }
 
 export interface CVAnalysisSection {
@@ -111,6 +123,7 @@ export interface CVAnalysisResponse {
   weaknesses: string[]
   tips: string[]
   created_at: string
+  gamification?: GamificationEvent
 }
 
 export interface CVAnalysesResponse {
@@ -209,6 +222,17 @@ export interface OracleWeeklySummaryResponse {
   total_messages: number
 }
 
+export interface ActivityLogEntry {
+  action: string
+  xp_gained: number
+  description: string
+  created_at: string
+}
+
+export interface ActivityLogResponse {
+  activities: ActivityLogEntry[]
+}
+
 // API functions
 export const api = {
   // Gamification
@@ -217,6 +241,7 @@ export const api = {
   getAchievements: () => fetchAPI<AchievementsResponse>('/gamification/achievements'),
   getWeeklySummary: () => fetchAPI<{ summary: string }>('/gamification/weekly-summary'),
   getTimeline: () => fetchAPI<TimelineResponse>('/gamification/timeline'),
+  getActivityLog: (limit = 20) => fetchAPI<ActivityLogResponse>(`/gamification/activity-log?limit=${limit}`),
 
   // GitHub
   getRepos: () => fetchAPI<ReposResponse>('/github/repos'),

@@ -1,10 +1,12 @@
-"""Gamification endpoints — profile, skills, achievements."""
+"""Gamification endpoints — profile, skills, achievements, activity log."""
+
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 from app.database import get_session
-from app.models import Achievement, PlayerProfile, Skill
+from app.models import Achievement, ActivityLog, PlayerProfile, Skill
 from app.services.mock_ai import weekly_summary
 
 router = APIRouter(prefix="/gamification", tags=["gamification"])
@@ -272,7 +274,37 @@ async def get_timeline():
     }
 
 
+@router.get("/activity-log")
+async def get_activity_log(limit: int = 20, session: Session = Depends(get_session)):
+    """Recent XP events from activity log."""
+    logs = session.exec(
+        select(ActivityLog).order_by(col(ActivityLog.id).desc()).limit(limit)
+    ).all()
+    return {
+        "activities": [
+            {"action": l.action, "xp_gained": l.xp_gained, "description": l.description, "created_at": l.created_at}
+            for l in logs
+        ]
+    }
+
+
 @router.get("/weekly-summary")
-async def get_weekly_summary():
-    """Get mock weekly activity summary."""
-    return {"summary": weekly_summary()}
+async def get_weekly_summary(session: Session = Depends(get_session)):
+    """Weekly summary computed from real activity log + mock narrative."""
+    one_week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+    recent = session.exec(
+        select(ActivityLog).where(ActivityLog.created_at >= one_week_ago)
+    ).all()
+
+    total_xp = sum(a.xp_gained for a in recent)
+    profile = session.exec(select(PlayerProfile)).first()
+    p_dict = {
+        "level": profile.level, "wisdom": profile.wisdom,
+    } if profile else None
+
+    summary = weekly_summary(profile=p_dict)
+    # Override with real data when available
+    if total_xp > 0:
+        summary["xp_gained"] = total_xp
+    summary["total_activities"] = len(recent)
+    return summary

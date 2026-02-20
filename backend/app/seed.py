@@ -65,6 +65,11 @@ def seed_initial_data(session: Session) -> None:
         ("Code Wizard", "Wrote 10,000+ lines of clean code", "code", "coding", "#8b5cf6", True, "2024-07-22"),
         ("Shield Bearer", "Maintained 90%+ test coverage", "shield", "quality", "#3b82f6", True, "2024-08-15"),
         ("Quest Champion", "Delivered a project ahead of deadline", "trophy", "quests", "#f0c040", True, "2024-11-30"),
+        # Lockable achievements — unlocked dynamically by gamification engine
+        ("Oracle Initiate", "Consulted the Oracle for the first time", "sparkles", "oracle", "#8b5cf6", False, None),
+        ("Oracle Sage", "Sent 20+ messages to the Oracle", "brain", "oracle", "#8b5cf6", False, None),
+        ("Scroll Keeper", "Wrote 3 or more tavern posts", "scroll", "writing", "#22c55e", False, None),
+        ("CV Master", "Uploaded and analyzed your CV", "file-text", "career", "#3b82f6", False, None),
     ]
 
     for name, desc, icon, cat, color, unlocked, date in achievements_data:
@@ -130,4 +135,25 @@ def seed_initial_data(session: Session) -> None:
             created_at="2025-01-01T00:00:00",
         ))
 
+    session.commit()
+
+
+# Lockable achievements that should exist even in pre-existing databases
+_LOCKABLE_ACHIEVEMENTS = [
+    ("Oracle Initiate", "Consulted the Oracle for the first time", "sparkles", "oracle", "#8b5cf6"),
+    ("Oracle Sage", "Sent 20+ messages to the Oracle", "brain", "oracle", "#8b5cf6"),
+    ("Scroll Keeper", "Wrote 3 or more tavern posts", "scroll", "writing", "#22c55e"),
+    ("CV Master", "Uploaded and analyzed your CV", "file-text", "career", "#3b82f6"),
+]
+
+
+def ensure_achievements(session: Session) -> None:
+    """Insert lockable achievements if they don't exist yet (for existing DBs)."""
+    for name, desc, icon, cat, color in _LOCKABLE_ACHIEVEMENTS:
+        exists = session.exec(select(Achievement).where(Achievement.name == name)).first()
+        if not exists:
+            session.add(Achievement(
+                name=name, description=desc, icon=icon, category=cat,
+                color=color, unlocked=False, unlock_date=None,
+            ))
     session.commit()

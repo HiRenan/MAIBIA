@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'motion/react'
 import { useNavigate } from 'react-router-dom'
-import { Shield, Zap, Crown, ChevronRight, Trophy, Code, GitBranch, Star } from 'lucide-react'
+import {
+  Shield, Zap, Crown, ChevronRight, Trophy, Code, GitBranch, Star,
+  Flame, Sparkles, ScrollText, Brain, FileText, type LucideIcon,
+} from 'lucide-react'
 import AnimatedCounter from '../components/ui/AnimatedCounter'
 import GlassCard from '../components/ui/GlassCard'
-import { api, type ProfileResponse } from '../services/api'
+import { api, type ProfileResponse, type AchievementsResponse } from '../services/api'
 import { useAPI } from '../hooks/useAPI'
 
 const container = {
@@ -28,12 +31,20 @@ function getStats(profile: ProfileResponse) {
   ]
 }
 
-const BADGES = [
-  { label: 'First Commit', icon: GitBranch, color: '#22c55e' },
-  { label: 'Polyglot', icon: Code, color: '#3b82f6' },
-  { label: 'Star Collector', icon: Star, color: '#f0c040' },
-  { label: 'Quest Master', icon: Trophy, color: '#8b5cf6' },
-]
+const ICON_MAP: Record<string, LucideIcon> = {
+  'git-branch': GitBranch, code: Code, star: Star, trophy: Trophy,
+  flame: Flame, shield: Shield, sparkles: Sparkles, scroll: ScrollText,
+  brain: Brain, 'file-text': FileText,
+}
+
+const FALLBACK_ACHIEVEMENTS: AchievementsResponse = {
+  achievements: [
+    { name: 'First Commit', description: '', icon: 'git-branch', category: 'coding', color: '#22c55e', unlocked: true, unlock_date: null },
+    { name: 'Polyglot', description: '', icon: 'code', category: 'skills', color: '#3b82f6', unlocked: true, unlock_date: null },
+    { name: 'Star Collector', description: '', icon: 'star', category: 'social', color: '#f0c040', unlocked: true, unlock_date: null },
+    { name: 'Quest Master', description: '', icon: 'trophy', category: 'quests', color: '#8b5cf6', unlocked: true, unlock_date: null },
+  ],
+}
 
 function useTypewriter(text: string, speed = 60, delay = 800) {
   const [displayed, setDisplayed] = useState('')
@@ -76,7 +87,13 @@ const FALLBACK_PROFILE: ProfileResponse = {
 export default function Hero() {
   const navigate = useNavigate()
   const { data: profile } = useAPI(api.getProfile, FALLBACK_PROFILE)
+  const { data: achievementsData } = useAPI(api.getAchievements, FALLBACK_ACHIEVEMENTS)
   const subtitle = useTypewriter(`${profile.dev_class}  \u2022  Level ${profile.level}`, 50, 600)
+
+  const badges = achievementsData.achievements
+    .filter((a) => a.unlocked)
+    .slice(0, 6)
+    .map((a) => ({ label: a.name, icon: ICON_MAP[a.icon] || Trophy, color: a.color }))
 
   return (
     <motion.div
@@ -171,7 +188,7 @@ export default function Hero() {
 
       {/* Achievement badges */}
       <motion.div variants={item} className="mt-6 flex flex-wrap justify-center gap-2">
-        {BADGES.map((badge, i) => {
+        {badges.map((badge, i) => {
           const Icon = badge.icon
           return (
             <motion.div

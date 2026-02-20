@@ -7,7 +7,7 @@ from sqlmodel import Session
 
 from app.database import create_db_and_tables, engine
 from app.routers import blog, cv, gamification, github, oracle
-from app.seed import seed_initial_data
+from app.seed import ensure_achievements, seed_initial_data
 
 
 @asynccontextmanager
@@ -15,6 +15,7 @@ async def lifespan(app: FastAPI):
     create_db_and_tables()
     with Session(engine) as session:
         seed_initial_data(session)
+        ensure_achievements(session)
     yield
 
 

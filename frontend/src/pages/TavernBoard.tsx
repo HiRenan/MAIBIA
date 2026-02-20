@@ -20,6 +20,7 @@ import AnimatedCounter from '../components/ui/AnimatedCounter'
 import Modal from '../components/ui/Modal'
 import { api, type BlogPostData, type BlogPostCreate } from '../services/api'
 import { useAPI } from '../hooks/useAPI'
+import { useGamification } from '../contexts/GamificationContext'
 
 // ─── Fallback Data ──────────────────────────────────────────────────────
 const FALLBACK_POSTS: BlogPostData[] = [
@@ -269,7 +270,7 @@ function CategoryFilters({
             onClick={() => onChange(cat.key)}
             className="relative flex items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-medium tracking-wide transition-all duration-200"
             style={{
-              borderColor: isActive ? `${cat.color}60` : 'rgba(42, 42, 90, 0.4)',
+              borderColor: isActive ? `${cat.color}60` : 'var(--color-surface-dim)',
               backgroundColor: isActive ? `${cat.color}12` : 'transparent',
               color: isActive ? cat.color : '#94a3b8',
             }}
@@ -668,7 +669,7 @@ function PostFormModal({
                   onClick={() => setCategory(cat)}
                   className="rounded-full border px-3 py-1 text-xs font-medium capitalize transition-all"
                   style={{
-                    borderColor: isSelected ? `${color}60` : 'rgba(42, 42, 90, 0.4)',
+                    borderColor: isSelected ? `${color}60` : 'var(--color-surface-dim)',
                     backgroundColor: isSelected ? `${color}15` : 'transparent',
                     color: isSelected ? color : '#94a3b8',
                   }}
@@ -780,6 +781,7 @@ function DeleteConfirmModal({
 // ─── Main TavernBoard Page ──────────────────────────────────────────────
 
 export default function TavernBoard() {
+  const { showXPGain } = useGamification()
   const { data, loading } = useAPI(
     () => api.getBlogPosts(),
     { posts: FALLBACK_POSTS, total: FALLBACK_POSTS.length }
@@ -829,7 +831,10 @@ export default function TavernBoard() {
     }
     setAdditions((prev) => [newPost, ...prev])
     setCreateModalOpen(false)
-  }, [])
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const gamification = (result as any)?.gamification
+    if (gamification) showXPGain(gamification)
+  }, [showXPGain])
 
   const handleEdit = useCallback(async (formData: BlogPostCreate) => {
     if (!editingPost) return
@@ -880,9 +885,9 @@ export default function TavernBoard() {
       </motion.div>
 
       {/* Main Grid */}
-      <div className="grid gap-8 lg:grid-cols-5">
+      <div className="grid gap-6 md:gap-8 md:grid-cols-3 lg:grid-cols-5">
         {/* Posts feed */}
-        <div className="space-y-4 lg:col-span-3">
+        <div className="space-y-4 md:col-span-2 lg:col-span-3">
           {loading && posts.length === 0 && (
             <div className="py-16 text-center">
               <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-2 border-accent-purple/30 border-t-accent-purple" />
@@ -920,7 +925,7 @@ export default function TavernBoard() {
         </div>
 
         {/* Sidebar */}
-        <div className="space-y-8 lg:col-span-2">
+        <div className="space-y-8 md:col-span-1 lg:col-span-2">
           <SocialLinksPanel />
           <TagCloud posts={posts} />
           <PinnedHighlight post={pinnedPost} />

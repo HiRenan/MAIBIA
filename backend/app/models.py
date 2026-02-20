@@ -75,3 +75,11 @@ class ChatMessage(SQLModel, table=True):
     text: str
     context_topic: str = ""  # matched keyword, for analytics
     created_at: str  # ISO date string
+
+
+class ActivityLog(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    action: str  # "oracle_chat", "cv_upload", "blog_create"
+    xp_gained: int = 0
+    description: str = ""
+    created_at: str  # ISO date string

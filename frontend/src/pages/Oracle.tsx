@@ -14,6 +14,7 @@ import {
   type OracleWeeklySummaryResponse,
 } from '../services/api'
 import { useAPI } from '../hooks/useAPI'
+import { useGamification } from '../contexts/GamificationContext'
 
 /* ═══════════════════════════════════════════
    ANIMATION VARIANTS
@@ -201,6 +202,8 @@ export default function Oracle() {
     () => api.getOracleWeeklySummary(), FALLBACK_WEEKLY,
   )
 
+  const { showXPGain } = useGamification()
+
   /* ── Local state ── */
   const [pendingMessages, setPendingMessages] = useState<ChatMsg[]>([])
   const [input, setInput] = useState('')
@@ -252,6 +255,7 @@ export default function Oracle() {
       }
 
       if (result?.text) {
+        if (result.gamification) showXPGain(result.gamification)
         setTimeout(() => addResponse(result.text), 400 + Math.random() * 400)
       } else {
         setTimeout(() => addResponse(
@@ -259,7 +263,7 @@ export default function Oracle() {
         ), 800 + Math.random() * 500)
       }
     })
-  }, [isTyping, stats, historyMessages.length])
+  }, [isTyping, stats, historyMessages.length, showXPGain])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -288,15 +292,15 @@ export default function Oracle() {
       </motion.div>
 
       {/* ── Main Layout ── */}
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+      <div className="grid gap-6 md:grid-cols-[1fr_280px] lg:grid-cols-[1fr_320px]">
         {/* ── Left: Chat Interface ── */}
         <motion.div variants={item} className="flex flex-col">
           <GlassCard
             accentColor="rgba(139, 92, 246, 0.15)"
             hover={false}
             corners
-            className="flex flex-col"
-            style={{ height: 'calc(100vh - 22rem)', minHeight: '420px' }}
+            className="flex flex-col min-h-[300px] sm:min-h-[420px]"
+            style={{ height: 'calc(100vh - 22rem)' }}
           >
             {/* Chat header */}
             <div className="flex items-center gap-2 border-b border-border-subtle/20 px-5 py-3">
@@ -318,7 +322,7 @@ export default function Oracle() {
               ref={chatRef}
               className="flex-1 space-y-4 overflow-y-auto p-5"
               style={{
-                background: 'linear-gradient(180deg, rgba(139, 92, 246, 0.02) 0%, rgba(26, 26, 62, 0.15) 100%)',
+                background: 'linear-gradient(180deg, rgba(139, 92, 246, 0.02) 0%, var(--color-glass-bg) 100%)',
               }}
             >
               {messages.length === 0 && !isTyping && (

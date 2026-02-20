@@ -7,6 +7,7 @@ from sqlmodel import Session, SQLModel, select
 
 from app.database import get_session
 from app.models import BlogPost
+from app.services.gamification_engine import award_xp
 
 router = APIRouter(tags=["blog"])
 
@@ -52,7 +53,11 @@ def create_post(data: BlogPostCreate, session: Session = Depends(get_session)):
     session.add(post)
     session.commit()
     session.refresh(post)
-    return post
+
+    # Award XP for creating a blog post
+    gamification = award_xp(session, "blog_create", f"Published: {post.title}", 75)
+
+    return {**post.model_dump(), "gamification": gamification}
 
 
 @router.put("/blog/posts/{post_id}")

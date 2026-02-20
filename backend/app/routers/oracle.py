@@ -8,6 +8,7 @@ from sqlmodel import Session, col, func, select
 
 from app.database import get_session
 from app.models import ChatMessage, PlayerProfile, Skill
+from app.services.gamification_engine import award_xp
 from app.services.mock_ai import oracle_chat, weekly_summary
 
 router = APIRouter(prefix="/oracle", tags=["oracle"])
@@ -65,7 +66,10 @@ async def chat(req: ChatRequest, session: Session = Depends(get_session)):
     session.add(oracle_msg)
     session.commit()
 
-    return {"role": "oracle", "text": result["text"], "topic": result["topic"]}
+    # Award XP for consulting the Oracle
+    gamification = award_xp(session, "oracle_chat", f"Consulted Oracle: {result['topic']}", 25)
+
+    return {"role": "oracle", "text": result["text"], "topic": result["topic"], "gamification": gamification}
 
 
 @router.get("/history")

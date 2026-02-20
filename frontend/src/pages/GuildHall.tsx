@@ -17,6 +17,7 @@ import {
   type CVAnalysesResponse,
 } from '../services/api'
 import { useAPI } from '../hooks/useAPI'
+import { useGamification } from '../contexts/GamificationContext'
 
 /* ═══════════════════════════════════════════
    ANIMATION VARIANTS
@@ -152,7 +153,7 @@ function ScoreRing({ score, size = 120 }: { score: number; size?: number }) {
         <circle
           cx={size / 2} cy={size / 2} r={radius}
           fill="none"
-          stroke="rgba(42, 42, 90, 0.3)"
+          stroke="var(--color-surface-dim)"
           strokeWidth={strokeWidth}
         />
         {/* Score arc */}
@@ -207,13 +208,13 @@ function RadarChart({ stats }: { stats: { name: string; value: number; color: st
         <polygon
           key={scale}
           points={angles.map((a) => `${center + maxR * scale * Math.cos(a)},${center + maxR * scale * Math.sin(a)}`).join(' ')}
-          fill="none" stroke="rgba(42, 42, 90, 0.4)" strokeWidth={0.5}
+          fill="none" stroke="var(--color-surface-dim)" strokeWidth={0.5}
         />
       ))}
       {angles.map((a, i) => (
         <line key={i} x1={center} y1={center}
           x2={center + maxR * Math.cos(a)} y2={center + maxR * Math.sin(a)}
-          stroke="rgba(42, 42, 90, 0.3)" strokeWidth={0.5}
+          stroke="var(--color-surface-dim)" strokeWidth={0.5}
         />
       ))}
       <motion.polygon
@@ -362,6 +363,8 @@ function generateRPGCV(
    MAIN COMPONENT
    ═══════════════════════════════════════════ */
 export default function GuildHall() {
+  const { showXPGain } = useGamification()
+
   /* ─── API data ─── */
   const { data: profile } = useAPI(() => api.getProfile(), FALLBACK_PROFILE)
   const { data: achievementsData } = useAPI(() => api.getAchievements(), FALLBACK_ACHIEVEMENTS)
@@ -430,8 +433,9 @@ export default function GuildHall() {
     if (result) {
       setCurrentAnalysis(result)
       setAnalyses(prev => [result, ...prev])
+      if (result.gamification) showXPGain(result.gamification)
     }
-  }, [currentFile])
+  }, [currentFile, showXPGain])
 
   const handleDownload = useCallback(() => {
     const text = generateRPGCV(profile, skillsData, achievementsData)
@@ -463,7 +467,7 @@ export default function GuildHall() {
         titleCount={unlockedTitles.length}
       />
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2">
         {/* ═══ LEFT COLUMN ═══ */}
         <div className="space-y-6">
           {/* Character Sheet */}
