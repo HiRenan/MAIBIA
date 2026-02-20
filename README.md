@@ -51,7 +51,6 @@
 - **GitHub (perfil):** `https://github.com/HiRenan`
 - **Dev.to:** `https://dev.to/hirenan`
 
-> Para avaliacao da aula, o item mais importante e o **endpoint publico funcionando**.
 
 ---
 
