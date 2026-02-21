@@ -1,8 +1,8 @@
 # ⚔️ DevQuest — Gamified Career Intelligence Platform
 
-> *An RPG-themed interactive portfolio that transforms a developer's career into a gamified quest system.*
+> _An RPG-themed interactive portfolio that transforms a developer's career into a gamified quest system._
 
-> *Um portfolio interativo com tema RPG que transforma a carreira de um desenvolvedor em um sistema gamificado de quests.*
+> _Um portfolio interativo com tema RPG que transforma a carreira de um desenvolvedor em um sistema gamificado de quests._
 
 <p align="center">
   <img src="https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=white" alt="React 19" />
@@ -52,22 +52,21 @@
 - **GitHub (perfil):** `https://github.com/HiRenan`
 - **Dev.to:** `https://dev.to/hirenan`
 
-
 ---
 
 ## 🏰 Sobre o Projeto
 
 Portfolios tradicionais de desenvolvedores sao estaticos e genericos — listam tecnologias e projetos sem transmitir a jornada de crescimento profissional. DevQuest reimagina o portfolio como uma **aventura RPG**, onde cada aspecto da carreira eh mapeado para mecanicas de jogo:
 
-| Conceito Real | Equivalente RPG | Tela |
-|---------------|----------------|------|
-| Projetos GitHub | Quests com raridade (Common → Legendary) | Quest Log |
-| Habilidades tecnicas | Arvore de skills com 3 branches e 15 nos | Skill Tree |
-| Marcos de carreira | Timeline cronologica com 15 entradas | Chronicle |
-| Curriculo | Ficha de personagem com stats e radar chart | Guild Hall |
-| Mentoria de IA | Oracle advisor com chat persistente | Oracle |
-| Blog pessoal | Tavern Board com CRUD e categorias | Tavern Board |
-| Progresso geral | XP, niveis, achievements e level-ups | Todo o sistema |
+| Conceito Real        | Equivalente RPG                             | Tela           |
+| -------------------- | ------------------------------------------- | -------------- |
+| Projetos GitHub      | Quests com raridade (Common → Legendary)    | Quest Log      |
+| Habilidades tecnicas | Arvore de skills com 3 branches e 15 nos    | Skill Tree     |
+| Marcos de carreira   | Timeline cronologica com 15 entradas        | Chronicle      |
+| Curriculo            | Ficha de personagem com stats e radar chart | Guild Hall     |
+| Mentoria de IA       | Oracle advisor com chat persistente         | Oracle         |
+| Blog pessoal         | Tavern Board com CRUD e categorias          | Tavern Board   |
+| Progresso geral      | XP, niveis, achievements e level-ups        | Todo o sistema |
 
 ### Features Principais
 
@@ -86,15 +85,15 @@ Portfolios tradicionais de desenvolvedores sao estaticos e genericos — listam 
 
 ## 🗺️ Telas do Sistema
 
-| # | Tela | Rota | Descricao |
-|---|------|------|-----------|
-| 1 | **Hero** | `/` | Landing page com avatar animado, stats, barra de XP e particulas 3D |
-| 2 | **Skill Tree** | `/skills` | Arvore SVG interativa com 15 skills em 3 branches |
-| 3 | **Quest Log** | `/quests` | Projetos GitHub reais com filtros, raridade e analise AI |
-| 4 | **Chronicle** | `/chronicle` | Timeline de carreira com scroll animations |
-| 5 | **Guild Hall** | `/guild` | Ficha RPG, upload de CV, radar chart e analise mock |
-| 6 | **Oracle** | `/oracle` | Chat interativo com respostas context-aware |
-| 7 | **Tavern Board** | `/tavern` | Blog com CRUD, markdown, categorias e social links |
+| #   | Tela             | Rota         | Descricao                                                           |
+| --- | ---------------- | ------------ | ------------------------------------------------------------------- |
+| 1   | **Hero**         | `/`          | Landing page com avatar animado, stats, barra de XP e particulas 3D |
+| 2   | **Skill Tree**   | `/skills`    | Arvore SVG interativa com 15 skills em 3 branches                   |
+| 3   | **Quest Log**    | `/quests`    | Projetos GitHub reais com filtros, raridade e analise AI            |
+| 4   | **Chronicle**    | `/chronicle` | Timeline de carreira com scroll animations                          |
+| 5   | **Guild Hall**   | `/guild`     | Ficha RPG, upload de CV, radar chart e analise mock                 |
+| 6   | **Oracle**       | `/oracle`    | Chat interativo com respostas context-aware                         |
+| 7   | **Tavern Board** | `/tavern`    | Blog com CRUD, markdown, categorias e social links                  |
 
 <details>
 <summary><strong>🏠 Hero — Landing Page</strong></summary>
@@ -122,6 +121,7 @@ Visualizacao interativa de 15 habilidades tecnicas organizadas em 3 branches:
 - **Data Sorcery** (verde #22c55e) — Pandas, PostgreSQL, ETL Pipelines, Analytics, Machine Learning
 
 **Features:**
+
 - **SVG Tree (desktop)** — Layout radial com no central mostrando Power Score
 - **Linhas animadas** conectando skills com particulas se movendo
 - **Arcos de progresso** ao redor de cada no
@@ -148,6 +148,7 @@ Showcase de projetos GitHub reais apresentados como quests de RPG:
 | 0-4 | Common | Cinza |
 
 **Calculo de XP por Projeto:**
+
 - Base: 100 XP
 - +10 por star
 - +15 por fork
@@ -155,6 +156,7 @@ Showcase de projetos GitHub reais apresentados como quests de RPG:
 - Maximo: 500 XP
 
 **Features:**
+
 - **GitHub API real** — Busca repos do usuario `HiRenan` em tempo real
 - **Fallback** — 6 projetos hardcoded se API indisponivel
 - **Modos de visualizacao** — Grid (2 colunas + featured card) e List (compacto)
@@ -194,6 +196,7 @@ Linha do tempo cronologica da carreira com 15 entradas:
 Central de character sheet e analise de CV:
 
 **Coluna Esquerda — Character Sheet:**
+
 - Avatar com iniciais e borda brilhante
 - Nome, titulo, nivel com barra de XP
 - **Radar chart** — Visualizacao 4 stats (STR, INT, DEX, WIS)
@@ -202,6 +205,7 @@ Central de character sheet e analise de CV:
 - **Equipment slots** — Skills agrupadas por branch com indicador de nivel
 
 **Coluna Direita — CV Analysis:**
+
 - **Zona de upload** — Drag-and-drop, preview de arquivo, max 5MB (PDF/DOC/DOCX)
 - **Botao de analise** — Dispara mock analysis com loading spinner
 - **Painel de resultados:**
@@ -257,34 +261,34 @@ Hub de blog e conteudo com sistema CRUD completo:
 
 ### Frontend
 
-| Tecnologia | Versao | Motivo |
-|------------|--------|--------|
-| **React** | 19.2 | Hooks modernos, ecossistema maduro, renderizacao eficiente |
-| **TypeScript** | 5.9 (strict) | Type safety, autocomplete, prevencao de bugs em compile-time |
-| **Vite** | 7.3 | Dev server ultra-rapido, HMR instantaneo, build otimizado |
-| **Tailwind CSS** | 4.1 | Utility-first com custom properties via `@theme`, dark/light mode |
-| **Framer Motion** | 12.34 | Animacoes production-grade: stagger, scroll triggers, spring physics |
-| **Three.js + R3F** | r182 | Background 3D com particulas, parallax de mouse |
-| **React Router** | 7.13 | Roteamento declarativo com 7 rotas |
-| **Lucide React** | 0.564 | Icones consistentes, tree-shakeable, leves |
+| Tecnologia         | Versao       | Motivo                                                               |
+| ------------------ | ------------ | -------------------------------------------------------------------- |
+| **React**          | 19.2         | Hooks modernos, ecossistema maduro, renderizacao eficiente           |
+| **TypeScript**     | 5.9 (strict) | Type safety, autocomplete, prevencao de bugs em compile-time         |
+| **Vite**           | 7.3          | Dev server ultra-rapido, HMR instantaneo, build otimizado            |
+| **Tailwind CSS**   | 4.1          | Utility-first com custom properties via `@theme`, dark/light mode    |
+| **Framer Motion**  | 12.34        | Animacoes production-grade: stagger, scroll triggers, spring physics |
+| **Three.js + R3F** | r182         | Background 3D com particulas, parallax de mouse                      |
+| **React Router**   | 7.13         | Roteamento declarativo com 7 rotas                                   |
+| **Lucide React**   | 0.564        | Icones consistentes, tree-shakeable, leves                           |
 
 ### Backend
 
-| Tecnologia | Motivo |
-|------------|--------|
-| **FastAPI** | Framework async em Python, auto-documentacao OpenAPI, type hints |
-| **SQLModel** | ORM que combina SQLAlchemy + Pydantic — tipo-seguro e validado |
-| **SQLite** | Zero configuracao, arquivo unico, perfeito para MVP |
-| **httpx** | Cliente HTTP async para chamadas a API do GitHub |
-| **python-multipart** | Suporte a upload de arquivos (CV) |
-| **Uvicorn** | Servidor ASGI de alta performance com hot reload |
+| Tecnologia           | Motivo                                                           |
+| -------------------- | ---------------------------------------------------------------- |
+| **FastAPI**          | Framework async em Python, auto-documentacao OpenAPI, type hints |
+| **SQLModel**         | ORM que combina SQLAlchemy + Pydantic — tipo-seguro e validado   |
+| **SQLite**           | Zero configuracao, arquivo unico, perfeito para MVP              |
+| **httpx**            | Cliente HTTP async para chamadas a API do GitHub                 |
+| **python-multipart** | Suporte a upload de arquivos (CV)                                |
+| **Uvicorn**          | Servidor ASGI de alta performance com hot reload                 |
 
 ### Deploy
 
-| Servico | Uso |
-|---------|-----|
-| **Vercel** | Frontend — CDN global, build automatico, SPA rewrites |
-| **Railway** | Backend — Procfile-based, ASGI hosting, auto-deploy |
+| Servico     | Uso                                                   |
+| ----------- | ----------------------------------------------------- |
+| **Vercel**  | Frontend — CDN global, build automatico, SPA rewrites |
+| **Railway** | Backend — Procfile-based, ASGI hosting, auto-deploy   |
 
 ---
 
@@ -409,56 +413,56 @@ O sistema de progressao funciona com XP acumulado e niveis crescentes:
 
 **Acoes que concedem XP:**
 
-| Acao | XP | Router |
-|------|----|--------|
-| Pergunta ao Oracle | 25 | oracle.py |
-| Upload de CV | 100 | cv.py |
-| Criar blog post | 75 | blog.py |
+| Acao               | XP  | Router    |
+| ------------------ | --- | --------- |
+| Pergunta ao Oracle | 25  | oracle.py |
+| Upload de CV       | 100 | cv.py     |
+| Criar blog post    | 75  | blog.py   |
 
 ### Achievements (12 total)
 
 **Pre-desbloqueados (8):**
 
-| Achievement | Categoria | Icone |
-|-------------|-----------|-------|
-| First Commit | coding | git-branch |
-| Polyglot | skills | code |
-| Star Collector | social | star |
-| Quest Master | quests | trophy |
-| Bug Hunter | coding | flame |
-| Code Wizard | skills | code |
-| Shield Bearer | quality | shield |
-| Quest Champion | quests | trophy |
+| Achievement    | Categoria | Icone      |
+| -------------- | --------- | ---------- |
+| First Commit   | coding    | git-branch |
+| Polyglot       | skills    | code       |
+| Star Collector | social    | star       |
+| Quest Master   | quests    | trophy     |
+| Bug Hunter     | coding    | flame      |
+| Code Wizard    | skills    | code       |
+| Shield Bearer  | quality   | shield     |
+| Quest Champion | quests    | trophy     |
 
 **Dinamicos (4) — desbloqueados por acao:**
 
-| Achievement | Condicao | Categoria |
-|-------------|----------|-----------|
-| Oracle Initiate | 1+ mensagem no chat | oracle |
-| Oracle Sage | 20+ mensagens no chat | oracle |
-| Scroll Keeper | 3+ blog posts | writing |
-| CV Master | 1+ analise de CV | career |
+| Achievement     | Condicao              | Categoria |
+| --------------- | --------------------- | --------- |
+| Oracle Initiate | 1+ mensagem no chat   | oracle    |
+| Oracle Sage     | 20+ mensagens no chat | oracle    |
+| Scroll Keeper   | 3+ blog posts         | writing   |
+| CV Master       | 1+ analise de CV      | career    |
 
 ### Stats RPG
 
 Os 4 atributos do personagem sao **recalculados automaticamente** apos cada award de XP:
 
-| Stat | Nome | Formula | Cap |
-|------|------|---------|-----|
-| **STR** | Problem Solving | `50 + (blog_posts × 3) + (achievements × 2)` | 100 |
-| **INT** | Technical Knowledge | `50 + (soma_niveis_skills × 2)` | 100 |
-| **DEX** | Adaptability | `50 + (acoes_distintas × 5) + (cv_analyses × 3)` | 100 |
-| **WIS** | Soft Skills | `50 + oracle_messages + (oracle_level × 2)` | 100 |
+| Stat    | Nome                | Formula                                          | Cap |
+| ------- | ------------------- | ------------------------------------------------ | --- |
+| **STR** | Problem Solving     | `50 + (blog_posts × 3) + (achievements × 2)`     | 100 |
+| **INT** | Technical Knowledge | `50 + (soma_niveis_skills × 2)`                  | 100 |
+| **DEX** | Adaptability        | `50 + (acoes_distintas × 5) + (cv_analyses × 3)` | 100 |
+| **WIS** | Soft Skills         | `50 + oracle_messages + (oracle_level × 2)`      | 100 |
 
 > Stats nunca diminuem — a formula usa `max(atual, calculado)`.
 
 ### Skills (15 total, 3 branches)
 
-| Branch | Cor | Skills | Niveis |
-|--------|-----|--------|--------|
-| **Frontend Arcana** | #8b5cf6 | React (4), TypeScript (4), Tailwind CSS (3), Three.js (2), Next.js (locked) | 0-5 |
-| **Backend Warfare** | #3b82f6 | Python (4), FastAPI (3), Node.js (3), SQL (3), Docker (locked) | 0-5 |
-| **Data Sorcery** | #22c55e | Pandas (3), PostgreSQL (3), ETL Pipelines (2), Analytics (2), ML (locked) | 0-5 |
+| Branch              | Cor     | Skills                                                                      | Niveis |
+| ------------------- | ------- | --------------------------------------------------------------------------- | ------ |
+| **Frontend Arcana** | #8b5cf6 | React (4), TypeScript (4), Tailwind CSS (3), Three.js (2), Next.js (locked) | 0-5    |
+| **Backend Warfare** | #3b82f6 | Python (4), FastAPI (3), Node.js (3), SQL (3), Docker (locked)              | 0-5    |
+| **Data Sorcery**    | #22c55e | Pandas (3), PostgreSQL (3), ETL Pipelines (2), Analytics (2), ML (locked)   | 0-5    |
 
 **Tier System:** Locked → Novice (1) → Apprentice (2) → Adept (3) → Expert (4) → Master (5)
 
@@ -505,11 +509,11 @@ Acentos:     Versoes ajustadas para fundo claro
 
 ### Tipografia
 
-| Fonte | Uso |
-|-------|-----|
+| Fonte                 | Uso                       |
+| --------------------- | ------------------------- |
 | **Cinzel Decorative** | Titulos display, logotipo |
-| **Cinzel** | Headings de secao |
-| **Raleway** | Corpo de texto |
+| **Cinzel**            | Headings de secao         |
+| **Raleway**           | Corpo de texto            |
 
 ---
 
@@ -521,57 +525,57 @@ Documentacao interativa: `http://localhost:8000/docs`
 
 ### Health
 
-| Metodo | Endpoint | Descricao |
-|--------|----------|-----------|
-| GET | `/api/health` | Health check — retorna status, quest name e versao |
+| Metodo | Endpoint      | Descricao                                          |
+| ------ | ------------- | -------------------------------------------------- |
+| GET    | `/api/health` | Health check — retorna status, quest name e versao |
 
 ### GitHub (`/api/github`)
 
-| Metodo | Endpoint | Descricao |
-|--------|----------|-----------|
-| GET | `/repos` | Lista todos os repos do GitHub (com fallback) |
-| GET | `/repos/{owner}/{repo}` | Detalhe de um repo com language breakdown |
-| POST | `/repos/{owner}/{repo}/analyze` | Mock analise AI de um projeto |
-| GET | `/quest-stats` | Stats agregados: total stars, XP, linguagens, quests |
-| GET | `/profile` | Perfil publico do GitHub |
+| Metodo | Endpoint                        | Descricao                                            |
+| ------ | ------------------------------- | ---------------------------------------------------- |
+| GET    | `/repos`                        | Lista todos os repos do GitHub (com fallback)        |
+| GET    | `/repos/{owner}/{repo}`         | Detalhe de um repo com language breakdown            |
+| POST   | `/repos/{owner}/{repo}/analyze` | Mock analise AI de um projeto                        |
+| GET    | `/quest-stats`                  | Stats agregados: total stars, XP, linguagens, quests |
+| GET    | `/profile`                      | Perfil publico do GitHub                             |
 
 ### Gamification (`/api/gamification`)
 
-| Metodo | Endpoint | Descricao |
-|--------|----------|-----------|
-| GET | `/profile` | Perfil do jogador: nome, classe, nivel, XP, stats RPG |
-| GET | `/skills` | Skills agrupadas por branch (3 categorias, 15 skills) |
-| GET | `/achievements` | Todos os achievements com status de unlock |
-| GET | `/timeline` | Timeline de carreira com 15 entradas |
-| GET | `/activity-log` | Log de atividades recentes (param: `limit`, default: 20) |
-| GET | `/weekly-summary` | Resumo semanal com narrativa mock |
+| Metodo | Endpoint          | Descricao                                                |
+| ------ | ----------------- | -------------------------------------------------------- |
+| GET    | `/profile`        | Perfil do jogador: nome, classe, nivel, XP, stats RPG    |
+| GET    | `/skills`         | Skills agrupadas por branch (3 categorias, 15 skills)    |
+| GET    | `/achievements`   | Todos os achievements com status de unlock               |
+| GET    | `/timeline`       | Timeline de carreira com 15 entradas                     |
+| GET    | `/activity-log`   | Log de atividades recentes (param: `limit`, default: 20) |
+| GET    | `/weekly-summary` | Resumo semanal com narrativa mock                        |
 
 ### CV (`/api/cv`)
 
-| Metodo | Endpoint | Descricao |
-|--------|----------|-----------|
-| POST | `/upload` | Upload de CV (multipart) + mock analysis + XP |
-| GET | `/analysis` | Ultima analise de CV |
-| GET | `/analyses` | Historico de todas as analises (newest first) |
+| Metodo | Endpoint    | Descricao                                     |
+| ------ | ----------- | --------------------------------------------- |
+| POST   | `/upload`   | Upload de CV (multipart) + mock analysis + XP |
+| GET    | `/analysis` | Ultima analise de CV                          |
+| GET    | `/analyses` | Historico de todas as analises (newest first) |
 
 ### Oracle (`/api/oracle`)
 
-| Metodo | Endpoint | Descricao |
-|--------|----------|-----------|
-| POST | `/chat` | Envia mensagem, recebe resposta context-aware + XP |
-| GET | `/history` | Historico de chat paginado (params: `limit`, `offset`) |
-| GET | `/stats` | Stats: messages_sent, wisdom_score, topics, oracle_level |
-| GET | `/weekly-summary` | Resumo semanal estruturado com dicas |
+| Metodo | Endpoint          | Descricao                                                |
+| ------ | ----------------- | -------------------------------------------------------- |
+| POST   | `/chat`           | Envia mensagem, recebe resposta context-aware + XP       |
+| GET    | `/history`        | Historico de chat paginado (params: `limit`, `offset`)   |
+| GET    | `/stats`          | Stats: messages_sent, wisdom_score, topics, oracle_level |
+| GET    | `/weekly-summary` | Resumo semanal estruturado com dicas                     |
 
 ### Blog (`/api/blog`)
 
-| Metodo | Endpoint | Descricao |
-|--------|----------|-----------|
-| GET | `/posts` | Lista todos os posts (pinned first, newest) |
-| GET | `/posts/{post_id}` | Detalhe de um post |
-| POST | `/posts` | Cria novo post + 75 XP |
-| PUT | `/posts/{post_id}` | Atualiza post existente |
-| DELETE | `/posts/{post_id}` | Deleta post |
+| Metodo | Endpoint           | Descricao                                   |
+| ------ | ------------------ | ------------------------------------------- |
+| GET    | `/posts`           | Lista todos os posts (pinned first, newest) |
+| GET    | `/posts/{post_id}` | Detalhe de um post                          |
+| POST   | `/posts`           | Cria novo post + 75 XP                      |
+| PUT    | `/posts/{post_id}` | Atualiza post existente                     |
+| DELETE | `/posts/{post_id}` | Deleta post                                 |
 
 ---
 
@@ -581,90 +585,91 @@ O banco de dados usa **SQLite** com **SQLModel** (SQLAlchemy + Pydantic). 7 tabe
 
 ### PlayerProfile
 
-| Campo | Tipo | Default | Descricao |
-|-------|------|---------|-----------|
-| name | str | "Renan Carvalho" | Nome do jogador |
-| title | str | "Full-Stack Mage" | Titulo RPG |
-| dev_class | str | "Full-Stack Mage" | Classe do personagem |
-| level | int | 15 | Nivel atual |
-| xp | int | 6450 | XP acumulado |
-| xp_next_level | int | 10000 | XP necessario para proximo nivel |
-| avatar_initials | str | "RC" | Iniciais do avatar |
-| strength | int | 72 | STR — Problem Solving |
-| intelligence | int | 88 | INT — Technical Knowledge |
-| dexterity | int | 65 | DEX — Adaptability |
-| wisdom | int | 70 | WIS — Soft Skills |
+| Campo           | Tipo | Default           | Descricao                        |
+| --------------- | ---- | ----------------- | -------------------------------- |
+| name            | str  | "Renan Carvalho"  | Nome do jogador                  |
+| title           | str  | "Full-Stack Mage" | Titulo RPG                       |
+| dev_class       | str  | "Full-Stack Mage" | Classe do personagem             |
+| level           | int  | 15                | Nivel atual                      |
+| xp              | int  | 6450              | XP acumulado                     |
+| xp_next_level   | int  | 10000             | XP necessario para proximo nivel |
+| avatar_initials | str  | "RC"              | Iniciais do avatar               |
+| strength        | int  | 72                | STR — Problem Solving            |
+| intelligence    | int  | 88                | INT — Technical Knowledge        |
+| dexterity       | int  | 65                | DEX — Adaptability               |
+| wisdom          | int  | 70                | WIS — Soft Skills                |
 
 ### Skill
 
-| Campo | Tipo | Descricao |
-|-------|------|-----------|
-| skill_id | str (indexed) | ID unico (ex: "react", "python") |
-| name | str | Nome de exibicao |
-| category | str | "frontend", "backend", "data" |
-| category_name | str | "Frontend Arcana", "Backend Warfare", "Data Sorcery" |
-| level / max_level | int | Nivel atual / maximo (0-5) |
-| unlocked | bool | Se a skill esta disponivel |
-| description | str | Descricao da habilidade |
-| color | str | Cor hexadecimal da branch |
-| projects | str | Projetos relacionados (comma-separated) |
+| Campo             | Tipo          | Descricao                                            |
+| ----------------- | ------------- | ---------------------------------------------------- |
+| skill_id          | str (indexed) | ID unico (ex: "react", "python")                     |
+| name              | str           | Nome de exibicao                                     |
+| category          | str           | "frontend", "backend", "data"                        |
+| category_name     | str           | "Frontend Arcana", "Backend Warfare", "Data Sorcery" |
+| level / max_level | int           | Nivel atual / maximo (0-5)                           |
+| unlocked          | bool          | Se a skill esta disponivel                           |
+| description       | str           | Descricao da habilidade                              |
+| color             | str           | Cor hexadecimal da branch                            |
+| projects          | str           | Projetos relacionados (comma-separated)              |
 
 ### Achievement
 
-| Campo | Tipo | Descricao |
-|-------|------|-----------|
-| name | str | Nome unico do achievement |
-| description | str | Descricao da conquista |
-| icon | str | Nome do icone (ex: "trophy", "star") |
-| category | str | coding, skills, social, quests, quality, oracle, writing, career |
-| color | str | Cor hexadecimal |
-| unlocked | bool | Status de desbloqueio |
-| unlock_date | str? | Data ISO de quando foi desbloqueado |
+| Campo       | Tipo | Descricao                                                        |
+| ----------- | ---- | ---------------------------------------------------------------- |
+| name        | str  | Nome unico do achievement                                        |
+| description | str  | Descricao da conquista                                           |
+| icon        | str  | Nome do icone (ex: "trophy", "star")                             |
+| category    | str  | coding, skills, social, quests, quality, oracle, writing, career |
+| color       | str  | Cor hexadecimal                                                  |
+| unlocked    | bool | Status de desbloqueio                                            |
+| unlock_date | str? | Data ISO de quando foi desbloqueado                              |
 
 ### BlogPost
 
-| Campo | Tipo | Descricao |
-|-------|------|-----------|
-| title | str | Titulo do post |
-| content | str | Conteudo em markdown |
-| category | str | update, project, achievement, thought |
-| tags | str | Tags comma-separated |
-| color | str | Cor do card |
-| pinned | bool | Se aparece no topo |
-| created_at / updated_at | str | Timestamps ISO |
+| Campo                   | Tipo | Descricao                             |
+| ----------------------- | ---- | ------------------------------------- |
+| title                   | str  | Titulo do post                        |
+| content                 | str  | Conteudo em markdown                  |
+| category                | str  | update, project, achievement, thought |
+| tags                    | str  | Tags comma-separated                  |
+| color                   | str  | Cor do card                           |
+| pinned                  | bool | Se aparece no topo                    |
+| created_at / updated_at | str  | Timestamps ISO                        |
 
 ### CVAnalysis
 
-| Campo | Tipo | Descricao |
-|-------|------|-----------|
-| filename | str | Nome do arquivo enviado |
-| file_size | int | Tamanho em bytes |
-| score | int | Score geral (0-95) |
-| sections | str (JSON) | Array de {name, score, feedback} |
-| strengths / weaknesses / tips | str (JSON) | Arrays de strings |
-| created_at | str | Timestamp ISO |
+| Campo                         | Tipo       | Descricao                        |
+| ----------------------------- | ---------- | -------------------------------- |
+| filename                      | str        | Nome do arquivo enviado          |
+| file_size                     | int        | Tamanho em bytes                 |
+| score                         | int        | Score geral (0-95)               |
+| sections                      | str (JSON) | Array de {name, score, feedback} |
+| strengths / weaknesses / tips | str (JSON) | Arrays de strings                |
+| created_at                    | str        | Timestamp ISO                    |
 
 ### ChatMessage
 
-| Campo | Tipo | Descricao |
-|-------|------|-----------|
-| role | str | "user" ou "oracle" |
-| text | str | Conteudo da mensagem |
-| context_topic | str | Keyword matched para analytics |
-| created_at | str | Timestamp ISO |
+| Campo         | Tipo | Descricao                      |
+| ------------- | ---- | ------------------------------ |
+| role          | str  | "user" ou "oracle"             |
+| text          | str  | Conteudo da mensagem           |
+| context_topic | str  | Keyword matched para analytics |
+| created_at    | str  | Timestamp ISO                  |
 
 ### ActivityLog
 
-| Campo | Tipo | Descricao |
-|-------|------|-----------|
-| action | str | "oracle_chat", "cv_upload", "blog_create" |
-| xp_gained | int | XP concedido pela acao |
-| description | str | Descricao da atividade |
-| created_at | str | Timestamp ISO |
+| Campo       | Tipo | Descricao                                 |
+| ----------- | ---- | ----------------------------------------- |
+| action      | str  | "oracle_chat", "cv_upload", "blog_create" |
+| xp_gained   | int  | XP concedido pela acao                    |
+| description | str  | Descricao da atividade                    |
+| created_at  | str  | Timestamp ISO                             |
 
 ### Dados Iniciais (Seed)
 
 Na primeira execucao, `seed.py` popula:
+
 - **1 PlayerProfile** — Renan Carvalho, Level 15, XP 6450
 - **15 Skills** — 5 por branch, niveis variados (0-4), 3 locked (Next.js, Docker, ML)
 - **12 Achievements** — 8 pre-unlocked + 4 lockable
@@ -714,11 +719,11 @@ Health: **http://localhost:8000/api/health**
 
 ### 4. Variaveis de Ambiente
 
-| Variavel | Default | Descricao |
-|----------|---------|-----------|
-| `FRONTEND_URL` | `http://localhost:5173` | URL do frontend (CORS) |
-| `DB_PATH` | `data` | Diretorio do SQLite (`<DB_PATH>/devquest.db`) |
-| `VITE_API_URL` | `/api` | Base URL da API no frontend |
+| Variavel              | Default                                    | Descricao                                      |
+| --------------------- | ------------------------------------------ | ---------------------------------------------- |
+| `FRONTEND_URL`        | `http://localhost:5173`                    | URL do frontend (CORS)                         |
+| `DB_PATH`             | `data`                                     | Diretorio do SQLite (`<DB_PATH>/devquest.db`)  |
+| `VITE_API_URL`        | `/api`                                     | Base URL da API no frontend                    |
 | `RAILWAY_BACKEND_URL` | `https://maibia-production.up.railway.app` | Backend alvo usado pela funcao proxy da Vercel |
 
 ### Workflow Tipico
@@ -845,25 +850,30 @@ Ao inves de `tailwind.config.js`, o projeto usa a nova sintaxe do Tailwind v4 co
 ### ✅ O que Funcionou Bem
 
 **Claude Code como Pair Programmer**
+
 - 7 paginas completas com animacoes avancadas
 - O agente manteve o tema RPG coeso em todas as telas
 - Iteracao rapida: Sprint 1 (base) → Sprint 1.5 (polish) → Sprint 2 (backend) → Sprint 3 (gamification)
 - Conhecimento tecnico: Three.js, SVG interativo, Framer Motion avancado — tudo gerado corretamente
 
 **Desenvolvimento Incremental**
+
 - 20+ commits incrementais, cada um focado em uma feature
 - Conventional commits (`feat:`, `fix:`, `chore:`) facilitam review
 
 **Graceful Degradation**
+
 - `useAPI(fetcher, fallback)` garante UX fluida com ou sem backend
 - Zero telas de loading bloqueante — conteudo aparece imediatamente
 
 **GitHub API Real**
+
 - Quest Log com repos reais, estrelas, forks, linguagens
 - Raridade e XP calculados automaticamente
 - Fallback transparente se API indisponivel
 
 **Sistema de Gamificacao**
+
 - Engine completa com XP, levels, achievements, stats
 - Notificacoes visuais (toasts, level-up modal) tornam a experiencia envolvente
 - Stats recalculados dinamicamente baseados em acoes do usuario
@@ -872,19 +882,19 @@ Ao inves de `tailwind.config.js`, o projeto usa a nova sintaxe do Tailwind v4 co
 
 **Performance do Three.js no Mobile**
 O background 3D causa queda de FPS em dispositivos moveis.
-*Mitigacao:* `prefers-reduced-motion` desabilita animacoes pesadas.
+_Mitigacao:_ `prefers-reduced-motion` desabilita animacoes pesadas.
 
 **SQLite em Deploy Ephemeral**
 Railway apaga o banco a cada redeploy.
-*Mitigacao:* `seed.py` reconstroi todos os dados no startup.
+_Mitigacao:_ `seed.py` reconstroi todos os dados no startup.
 
 **Tailwind CSS v4 Migration**
 Sintaxe significativamente diferente do v3: `@theme` em vez de config JS, classes renomeadas.
-*Aprendizado:* Sempre verificar docs da versao especifica.
+_Aprendizado:_ Sempre verificar docs da versao especifica.
 
 **Scope de IA**
 Originalmente planejado com analises mais sofisticadas, mas o requisito de "sem LLM" limitou a keyword matching.
-*Se fosse refazer:* Templates mais ricos com variaveis dinamicas baseadas nos dados reais.
+_Se fosse refazer:_ Templates mais ricos com variaveis dinamicas baseadas nos dados reais.
 
 ---
 
@@ -894,17 +904,18 @@ Este projeto foi construido inteiramente usando **Claude Code** (CLI do Claude d
 
 ### Sprints de Desenvolvimento
 
-| Sprint | Foco | Descricao |
-|--------|------|-----------|
-| **1** | Setup + Paginas basicas | Repo, React/Vite/Tailwind/Three.js, 6 paginas placeholder com animacoes |
-| **1.5** | Polish visual | Upgrade para 9-10/10: skill tree SVG, scroll animations, chat, filtros, upload |
-| **2** | Backend + Integracao | FastAPI, SQLModel, GitHub API, mock AI, graceful fallback, deploy config |
-| **3** | Gamification + Features | Engine de XP/achievements/level-up, blog CRUD, Oracle redesign, theme toggle |
-| **4** | Responsividade + Polish | Breakpoints tablet, animacoes refinadas, dark/light theme, UX polish |
+| Sprint  | Foco                    | Descricao                                                                      |
+| ------- | ----------------------- | ------------------------------------------------------------------------------ |
+| **1**   | Setup + Paginas basicas | Repo, React/Vite/Tailwind/Three.js, 6 paginas placeholder com animacoes        |
+| **1.5** | Polish visual           | Upgrade para 9-10/10: skill tree SVG, scroll animations, chat, filtros, upload |
+| **2**   | Backend + Integracao    | FastAPI, SQLModel, GitHub API, mock AI, graceful fallback, deploy config       |
+| **3**   | Gamification + Features | Engine de XP/achievements/level-up, blog CRUD, Oracle redesign, theme toggle   |
+| **4**   | Responsividade + Polish | Breakpoints tablet, animacoes refinadas, dark/light theme, UX polish           |
 
 ### Uso do Agente
 
 O Claude Code foi utilizado para:
+
 - Gerar componentes React com TypeScript e animacoes complexas
 - Implementar SVG interativo (skill tree com 15 nos conectados por linhas animadas com particulas)
 - Configurar Three.js com React Three Fiber, parallax de mouse e particulas 3D
@@ -917,20 +928,20 @@ O Claude Code foi utilizado para:
 
 ### Prompts Reais Usados (exemplos)
 
-1. `Crie uma pagina Skill Tree RPG com 3 branches, 15 skills, animacoes e fallback de dados.`
-Resultado: estrutura inicial da tela, layout e estados principais.
+1. `Em plan mode. Crie uma pagina Skill Tree RPG com 3 branches, 15 skills, animacoes e fallback de dados. Utilize o mcp do context7 e sequential-think. Utilize a skill de frontend-desing`
+   Resultado: estrutura inicial da tela, layout e estados principais.
 
-2. `Refatore para integrar com API FastAPI mantendo graceful degradation com dados mock.`
-Resultado: padrao `useAPI(fetcher, fallback)` aplicado nas paginas com fallback consistente.
+2. `Em plan mode. Refatore para integrar com API FastAPI mantendo graceful degradation com dados mock. Utilize o mcp do context7 e sequential-think.`
+   Resultado: padrao `useAPI(fetcher, fallback)` aplicado nas paginas com fallback consistente.
 
-3. `Implemente backend FastAPI com routers github/cv/oracle/gamification e SQLite via SQLModel.`
-Resultado: API completa com persistencia, seed e endpoints de integracao frontend-backend.
+3. `Em plan mode. Implemente backend FastAPI com routers github/cv/oracle/gamification e SQLite via SQLModel. Utilize o mcp do context7 e sequential-think.`
+   Resultado: API completa com persistencia, seed e endpoints de integracao frontend-backend.
 
-4. `Adicione sistema de gamificacao com XP, level-up, achievements dinamicos e activity log.`
-Resultado: `gamification_engine.py` com progressao de XP, desbloqueios e recalculo de stats.
+4. `Em plan mode. Adicione sistema de gamificacao com XP, level-up, achievements dinamicos e activity log. Utilize o mcp do context7 e sequential-think. Utilize a skill de frontend-desing`
+   Resultado: `gamification_engine.py` com progressao de XP, desbloqueios e recalculo de stats.
 
-5. `Melhore UX e design com tema RPG, dark/light toggle e animacoes sem quebrar responsividade.`
-Resultado: polimento visual, toasts/modais e ajustes para mobile/tablet.
+5. `Em plan mode. Melhore UX e design com tema RPG, dark/light toggle e animacoes sem quebrar responsividade. Utilize o mcp do context7 e sequential-think. Utilize a skill de frontend-desing`
+   Resultado: polimento visual, toasts/modais e ajustes para mobile/tablet.
 
 ### O que exigiu intervencao manual
 
@@ -940,15 +951,15 @@ Resultado: polimento visual, toasts/modais e ajustes para mobile/tablet.
 
 ### Metricas
 
-| Metrica | Valor |
-|---------|-------|
-| Total de commits | 20+ |
-| Paginas frontend | 7 + NotFound |
+| Metrica                    | Valor                           |
+| -------------------------- | ------------------------------- |
+| Total de commits           | 40+                             |
+| Paginas frontend           | 7 + NotFound                    |
 | Componentes compartilhados | 6 (ui/) + 2 (layout/) + 1 (3d/) |
-| Endpoints API | ~23 |
-| Modelos de dados | 7 tabelas |
-| Skills mapeadas | 15 |
-| Achievements | 12 |
+| Endpoints API              | ~23                             |
+| Modelos de dados           | 7 tabelas                       |
+| Skills mapeadas            | 15                              |
+| Achievements               | 12                              |
 
 ---
 
