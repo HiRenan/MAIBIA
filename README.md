@@ -708,7 +708,8 @@ Acesse: **http://localhost:5173**
 ```bash
 cd backend
 pip install -r requirements.txt
-uvicorn app.main:app --reload
+cd ..
+uvicorn app.main:app --reload --app-dir backend --env-file .env
 ```
 
 API: **http://localhost:8000**
@@ -719,22 +720,57 @@ Health: **http://localhost:8000/api/health**
 
 ### 4. Variaveis de Ambiente
 
-| Variavel              | Default                                    | Descricao                                      |
-| --------------------- | ------------------------------------------ | ---------------------------------------------- |
-| `FRONTEND_URL`        | `http://localhost:5173`                    | URL do frontend (CORS)                         |
-| `DB_PATH`             | `data`                                     | Diretorio do SQLite (`<DB_PATH>/devquest.db`)  |
-| `VITE_API_URL`        | `/api`                                     | Base URL da API no frontend                    |
-| `RAILWAY_BACKEND_URL` | `https://maibia-production.up.railway.app` | Backend alvo usado pela funcao proxy da Vercel |
+Use `.env.example` como base e crie um arquivo `.env` local.
+Para detalhes de backend e politica de logs, veja `backend/README-env.md`.
+
+#### Backend (secret/server-side)
+
+| Variavel                    | Default                    | Obrigatoria | Descricao |
+| --------------------------- | -------------------------- | ----------- | --------- |
+| `OPENAI_API_KEY`            | -                          | Sim         | Chave da API OpenAI (nunca expor no frontend) |
+| `OPENAI_MODEL_ORACLE`       | `gpt-4o-mini`              | Nao         | Modelo usado no fluxo Oracle |
+| `OPENAI_MODEL_CV`           | `gpt-4o-mini`              | Nao         | Modelo usado no fluxo de CV |
+| `OPENAI_TIMEOUT_SECONDS`    | `20`                       | Nao         | Timeout de chamadas ao provedor |
+| `OPENAI_MAX_RETRIES`        | `2`                        | Nao         | Tentativas para falhas transientes |
+| `OPENAI_TEMPERATURE_ORACLE` | `0.7`                      | Nao         | Temperatura do Oracle |
+| `OPENAI_TOP_P_ORACLE`       | `1.0`                      | Nao         | Top-p do Oracle |
+| `OPENAI_MAX_TOKENS_ORACLE`  | `600`                      | Nao         | Limite de tokens do Oracle |
+| `OPENAI_TEMPERATURE_CV`     | `0.2`                      | Nao         | Temperatura da analise de CV |
+| `OPENAI_TOP_P_CV`           | `1.0`                      | Nao         | Top-p da analise de CV |
+| `OPENAI_MAX_TOKENS_CV`      | `900`                      | Nao         | Limite de tokens da analise de CV |
+| `FRONTEND_URL`              | `http://localhost:5173`    | Nao         | URL do frontend para CORS |
+| `DB_PATH`                   | `data`                     | Nao         | Diretorio do SQLite (`<DB_PATH>/devquest.db`) |
+| `LOG_LEVEL`                 | `INFO`                     | Nao         | Nivel de log da aplicacao |
+| `LOG_REDACTION_ENABLED`     | `true`                     | Nao         | Habilita redacao de dados sensiveis |
+
+#### Frontend/Proxy (non-secret)
+
+| Variavel              | Default                                    | Descricao |
+| --------------------- | ------------------------------------------ | --------- |
+| `VITE_API_URL`        | `/api`                                     | Base URL da API no frontend |
+| `RAILWAY_BACKEND_URL` | `https://maibia-production.up.railway.app` | Backend alvo da funcao proxy da Vercel |
+
+#### Politica de Segredos e Logs (strict redaction)
+
+Nunca logar:
+1. `OPENAI_API_KEY` ou qualquer token.
+2. Prompt completo e payload bruto de CV.
+3. Headers de autorizacao completos.
+
+Permitido logar:
+1. `request_id` ou correlation id.
+2. Modelo, status, latencia e retries.
+3. Metricas agregadas de tokens (sem conteudo textual).
 
 ### Workflow Tipico
 
 Abra dois terminais:
 
 ```bash
-# Terminal 1 — Backend
-cd backend && uvicorn app.main:app --reload
+# Terminal 1 - Backend
+uvicorn app.main:app --reload --app-dir backend --env-file .env
 
-# Terminal 2 — Frontend
+# Terminal 2 - Frontend
 cd frontend && npm run dev
 ```
 
