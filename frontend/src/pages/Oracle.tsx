@@ -139,7 +139,7 @@ function MessageBubble({
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className={`flex gap-3 ${isOracle ? '' : 'flex-row-reverse'}`}
+      className={`flex min-w-0 gap-3 ${isOracle ? '' : 'flex-row-reverse'}`}
     >
       {/* Avatar */}
       <div
@@ -151,7 +151,7 @@ function MessageBubble({
       </div>
       {/* Bubble */}
       <div
-        className={`max-w-[80%] rounded-xl px-4 py-3 text-xs leading-relaxed ${
+        className={`min-w-0 max-w-[84%] overflow-hidden whitespace-pre-wrap break-all rounded-xl px-4 py-3 text-xs leading-relaxed ${
           isOracle
             ? 'rounded-tl-sm border border-accent-purple/15 bg-accent-purple/5 text-text-secondary'
             : 'rounded-tr-sm border border-accent-blue/15 bg-accent-blue/5 text-text-secondary'
@@ -292,14 +292,14 @@ export default function Oracle() {
       </motion.div>
 
       {/* ── Main Layout ── */}
-      <div className="grid gap-6 md:grid-cols-[1fr_280px] lg:grid-cols-[1fr_320px]">
+      <div className="min-w-0 grid gap-6 md:grid-cols-[1fr_280px] lg:grid-cols-[1fr_320px]">
         {/* ── Left: Chat Interface ── */}
-        <motion.div variants={item} className="flex flex-col">
+        <motion.div variants={item} className="min-w-0 flex flex-col">
           <GlassCard
             accentColor="rgba(139, 92, 246, 0.15)"
             hover={false}
             corners
-            className="flex flex-col min-h-[300px] sm:min-h-[420px]"
+            className="min-w-0 flex flex-col min-h-[300px] sm:min-h-[420px]"
             style={{ height: 'calc(100vh - 22rem)' }}
           >
             {/* Chat header */}
@@ -320,7 +320,7 @@ export default function Oracle() {
             {/* Messages area */}
             <div
               ref={chatRef}
-              className="flex-1 space-y-4 overflow-y-auto p-5"
+              className="flex-1 space-y-4 overflow-x-hidden overflow-y-auto p-5"
               style={{
                 background: 'linear-gradient(180deg, rgba(139, 92, 246, 0.02) 0%, var(--color-glass-bg) 100%)',
               }}
