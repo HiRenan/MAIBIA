@@ -3,7 +3,7 @@
 from fastapi import APIRouter
 import httpx
 
-from app.services.mock_ai import analyze_github_project
+from app.services.repo_analysis_service import analyze_repository
 
 router = APIRouter(prefix="/github", tags=["github"])
 GITHUB_USER = "HiRenan"
@@ -113,8 +113,9 @@ async def get_repo_detail(owner: str, repo: str):
 
 @router.post("/repos/{owner}/{repo}/analyze")
 async def analyze_repo(owner: str, repo: str):
-    """Return mock AI analysis for a repo."""
-    return analyze_github_project(f"{owner}/{repo}")
+    """Return LLM repository analysis with graceful fallback to mock."""
+    result = await analyze_repository(owner=owner, repo=repo)
+    return result.analysis.model_dump()
 
 
 @router.get("/quest-stats")

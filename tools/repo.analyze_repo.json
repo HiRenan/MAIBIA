@@ -5,7 +5,7 @@
   "tool": {
     "type": "function",
     "name": "repo.analyze_repo",
-    "description": "Returns repository analysis payload for owner/repo (currently backed by mock analysis service).",
+    "description": "Returns repository analysis payload for owner/repo using real LLM analysis with graceful fallback.",
     "strict": true,
     "parameters": {
       "type": "object",
@@ -31,7 +31,7 @@
     "router": "backend/app/routers/github.py",
     "endpoint": "POST /api/github/repos/{owner}/{repo}/analyze",
     "implementation_ref": "analyze_repo",
-    "notes": "Backed by app.services.mock_ai.analyze_github_project in current codebase."
+    "notes": "Backed by app.services.repo_analysis_service.analyze_repository with LLM-first strategy and mock fallback."
   },
   "output_success_schema": {
     "type": "object",
