@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 import {
   Star, GitFork, Wand2, Circle, Search, SortAsc, Zap,
   LayoutGrid, List, X, ExternalLink, ChevronDown, ChevronUp,
@@ -31,6 +32,7 @@ type Rarity = 'Common' | 'Rare' | 'Epic' | 'Legendary'
 type Status = 'Active' | 'Completed'
 type SortOption = 'Stars' | 'XP' | 'Name' | 'Updated'
 type ViewMode = 'grid' | 'list'
+type Translate = (key: string, options?: Record<string, unknown>) => string
 
 interface Quest {
   name: string
@@ -78,6 +80,31 @@ const LANG_COLORS: Record<string, string> = {
 const SORT_OPTIONS: SortOption[] = ['Stars', 'XP', 'Name', 'Updated']
 const RARITIES: Rarity[] = ['Common', 'Rare', 'Epic', 'Legendary']
 
+function getStatusLabel(status: 'all' | Status, t: Translate) {
+  if (status === 'all') return t('questLog.status.all')
+  return status === 'Active' ? t('questLog.status.active') : t('questLog.status.completed')
+}
+
+function getRarityLabel(rarity: Rarity, t: Translate) {
+  const rarityToKey: Record<Rarity, string> = {
+    Common: 'questLog.rarity.common',
+    Rare: 'questLog.rarity.rare',
+    Epic: 'questLog.rarity.epic',
+    Legendary: 'questLog.rarity.legendary',
+  }
+  return t(rarityToKey[rarity])
+}
+
+function getSortLabel(sort: SortOption, t: Translate) {
+  const sortToKey: Record<SortOption, string> = {
+    Stars: 'questLog.sort.stars',
+    XP: 'questLog.sort.xp',
+    Name: 'questLog.sort.name',
+    Updated: 'questLog.sort.updated',
+  }
+  return t(sortToKey[sort])
+}
+
 /* ═══════════════════════════════════════════
    FALLBACK DATA
    ═══════════════════════════════════════════ */
@@ -101,7 +128,7 @@ function repoToQuest(repo: RepoData): Quest {
   const status: Status = repo.status === 'Active' ? 'Active' : 'Completed'
   return {
     name: repo.name,
-    description: repo.description || 'No description',
+    description: repo.description || '',
     language: repo.language || 'Unknown',
     langColor: LANG_COLORS[repo.language] || '#94a3b8',
     stars: repo.stars,
@@ -128,10 +155,14 @@ function formatSize(kb: number): string {
   return `${kb} KB`
 }
 
-function formatDate(dateStr: string): string {
+function resolveLocale(language: string): string {
+  return language === 'pt-BR' ? 'pt-BR' : 'en-US'
+}
+
+function formatDate(dateStr: string, language: string): string {
   try {
     const d = new Date(dateStr)
-    return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+    return d.toLocaleDateString(resolveLocale(language), { month: 'short', year: 'numeric' })
   } catch {
     return dateStr
   }
@@ -225,6 +256,7 @@ const LANGUAGE_ICONS: Record<string, typeof IconTypeScript> = {
    STATS BAR
    ═══════════════════════════════════════════ */
 function QuestStatsBar({ quests }: { quests: Quest[] }) {
+  const { t } = useTranslation()
   const stats = useMemo(() => {
     const totalStars = quests.reduce((s, q) => s + q.stars, 0)
     const totalXP = quests.reduce((s, q) => s + q.xp, 0)
@@ -236,10 +268,16 @@ function QuestStatsBar({ quests }: { quests: Quest[] }) {
   }, [quests])
 
   const cards = [
-    { label: 'Active Quests', value: stats.activeCount, suffix: ` / ${stats.total}`, color: '#f0c040', iconEl: StatIconQuests },
-    { label: 'Total Stars', value: stats.totalStars, suffix: '', color: '#3b82f6', iconEl: StatIconStars },
-    { label: 'XP Earned', value: stats.totalXP, suffix: '', color: '#8b5cf6', iconEl: StatIconXP },
-    { label: 'Best Quest', value: 0, display: stats.bestQuest?.name.replace(/-/g, ' ') ?? '—', color: '#22c55e', iconEl: StatIconBest },
+    { label: t('questLog.stats.activeQuests'), value: stats.activeCount, suffix: ` / ${stats.total}`, color: '#f0c040', iconEl: StatIconQuests },
+    { label: t('questLog.stats.totalStars'), value: stats.totalStars, suffix: '', color: '#3b82f6', iconEl: StatIconStars },
+    { label: t('questLog.stats.xpEarned'), value: stats.totalXP, suffix: '', color: '#8b5cf6', iconEl: StatIconXP },
+    {
+    label: t('questLog.stats.bestQuest'),
+    value: 0,
+    display: stats.bestQuest?.name.replace(/-/g, ' ') ?? t('questLog.stats.none'),
+    color: '#22c55e',
+    iconEl: StatIconBest,
+  },
   ]
 
   return (
@@ -305,6 +343,7 @@ function QuestFilters({
   viewMode: ViewMode
   setViewMode: (v: ViewMode) => void
 }) {
+  const { t } = useTranslation()
   const languages = useMemo(() => {
     const langs = [...new Set(quests.map(q => q.language))].filter(l => l !== 'Unknown')
     return langs.sort()
@@ -335,7 +374,7 @@ function QuestFilters({
                   : 'border-border-subtle/30 text-text-muted hover:border-border-subtle/60 hover:text-text-secondary'
               }`}
             >
-              {f === 'all' ? 'All Quests' : f}
+              {getStatusLabel(f, t)}
             </button>
           )
         })}
@@ -362,7 +401,7 @@ function QuestFilters({
                 } : undefined}
               >
                 <Circle className="h-2 w-2 fill-current" style={{ color: RARITY_COLORS[r] }} />
-                <span className="hidden sm:inline">{r}</span>
+                <span className="hidden sm:inline">{getRarityLabel(r, t)}</span>
               </button>
             )
           })}
@@ -421,13 +460,13 @@ function QuestFilters({
       <div className="flex gap-2">
         <div className="relative flex flex-1 items-center">
           <Search className="absolute left-3 h-3.5 w-3.5 text-text-muted" />
-          <input
-            type="text"
-            placeholder="Search quests, languages, topics..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-9 w-full rounded-lg border border-border-subtle/30 bg-bg-card/20 pl-9 pr-3 text-xs text-text-primary outline-none transition-colors placeholder:text-text-muted focus:border-accent-blue/40 focus:bg-bg-card/30"
-          />
+            <input
+              type="text"
+              placeholder={t('questLog.searchPlaceholder')}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-9 w-full rounded-lg border border-border-subtle/30 bg-bg-card/20 pl-9 pr-3 text-xs text-text-primary outline-none transition-colors placeholder:text-text-muted focus:border-accent-blue/40 focus:bg-bg-card/30"
+            />
         </div>
 
         <div className="relative flex items-center">
@@ -438,7 +477,7 @@ function QuestFilters({
             className="h-9 appearance-none rounded-lg border border-border-subtle/30 bg-bg-card/20 pl-8 pr-8 text-xs text-text-secondary outline-none transition-colors focus:border-accent-blue/40"
           >
             {SORT_OPTIONS.map((opt) => (
-              <option key={opt} value={opt}>{opt}</option>
+              <option key={opt} value={opt}>{getSortLabel(opt, t)}</option>
             ))}
           </select>
         </div>
@@ -446,7 +485,7 @@ function QuestFilters({
         <button
           onClick={() => setSortDirection(sortDirection === 'desc' ? 'asc' : 'desc')}
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border-subtle/30 bg-bg-card/20 text-text-muted transition-colors hover:border-border-subtle/50 hover:text-text-secondary"
-          title={sortDirection === 'desc' ? 'Descending' : 'Ascending'}
+          title={sortDirection === 'desc' ? t('questLog.sort.descending') : t('questLog.sort.ascending')}
         >
           {sortDirection === 'desc' ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
         </button>
@@ -464,10 +503,12 @@ function LangIconRender({ language, langColor, className }: { language: string; 
 }
 
 function ProjectPreview({ quest, compact }: { quest: Quest; compact?: boolean }) {
+  const { t } = useTranslation()
   const [imgError, setImgError] = useState(false)
   const [imgLoaded, setImgLoaded] = useState(false)
   const previewUrl = `https://opengraph.githubassets.com/1/${quest.owner}/${quest.name}`
   const h = compact ? 'h-24' : 'h-40'
+  const displayLanguage = quest.language === 'Unknown' ? t('questLog.unknownLanguage') : quest.language
 
   return (
     <div className={`relative ${h} overflow-hidden rounded-t-xl bg-bg-card/50`}>
@@ -483,7 +524,7 @@ function ProjectPreview({ quest, compact }: { quest: Quest; compact?: boolean })
       {!imgError ? (
         <img
           src={previewUrl}
-          alt={`${quest.name} preview`}
+          alt={t('questLog.previewAlt', { name: quest.name })}
           className={`h-full w-full object-cover transition-opacity duration-500 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
           onLoad={() => setImgLoaded(true)}
           onError={() => setImgError(true)}
@@ -497,11 +538,11 @@ function ProjectPreview({ quest, compact }: { quest: Quest; compact?: boolean })
             background: `linear-gradient(135deg, ${quest.langColor}10, ${RARITY_COLORS[quest.rarity]}08, rgba(10,10,26,0.6))`,
           }}
         >
-          <div className="text-center">
-            <LangIconRender language={quest.language} langColor={quest.langColor} className="mx-auto h-10 w-10 opacity-25" />
-            <p className="mt-2 text-[10px] tracking-wider text-text-muted">{quest.language}</p>
+            <div className="text-center">
+              <LangIconRender language={quest.language} langColor={quest.langColor} className="mx-auto h-10 w-10 opacity-25" />
+              <p className="mt-2 text-[10px] tracking-wider text-text-muted">{displayLanguage}</p>
+            </div>
           </div>
-        </div>
       )}
 
       {/* Bottom gradient */}
@@ -518,7 +559,7 @@ function ProjectPreview({ quest, compact }: { quest: Quest; compact?: boolean })
               border: `1px solid ${RARITY_COLORS[quest.rarity]}30`,
             }}
           >
-            {quest.rarity}
+            {getRarityLabel(quest.rarity, t)}
           </span>
         </div>
       )}
@@ -532,7 +573,7 @@ function ProjectPreview({ quest, compact }: { quest: Quest; compact?: boolean })
           className="absolute top-2.5 left-2.5 flex items-center gap-1 rounded-md bg-black/50 px-2 py-1 text-[9px] text-white backdrop-blur-sm transition-colors hover:bg-black/70"
           onClick={(e) => e.stopPropagation()}
         >
-          <ExternalLink className="h-2.5 w-2.5" /> Live
+          <ExternalLink className="h-2.5 w-2.5" /> {t('questLog.live')}
         </a>
       )}
     </div>
@@ -583,6 +624,10 @@ function getRarityHover(rarity: Rarity) {
 function QuestCardGrid({ quest, isFeatured, onSelect }: {
   quest: Quest; isFeatured: boolean; onSelect: () => void
 }) {
+  const { t, i18n } = useTranslation()
+  const description = quest.description || t('questLog.fallbackNoDescription')
+  const displayLanguage = quest.language === 'Unknown' ? t('questLog.unknownLanguage') : quest.language
+
   return (
     <motion.div
       layout
@@ -620,7 +665,7 @@ function QuestCardGrid({ quest, isFeatured, onSelect }: {
           <div className="min-w-0 flex-1">
             <div className="mb-1 flex items-center gap-2">
               <Circle className="h-2.5 w-2.5 shrink-0 fill-current" style={{ color: quest.langColor }} />
-              <span className="text-[10px] text-text-muted">{quest.language}</span>
+              <span className="text-[10px] text-text-muted">{displayLanguage}</span>
               <span
                 className="rounded-full px-1.5 py-0.5 text-[8px] tracking-wider uppercase"
                 style={{
@@ -629,7 +674,7 @@ function QuestCardGrid({ quest, isFeatured, onSelect }: {
                   border: `1px solid ${quest.statusColor}20`,
                 }}
               >
-                {quest.status}
+                {getStatusLabel(quest.status, t)}
               </span>
             </div>
             <h3 className="truncate font-heading text-sm tracking-wide text-text-primary">
@@ -643,7 +688,7 @@ function QuestCardGrid({ quest, isFeatured, onSelect }: {
 
         {/* Description */}
         <p className="mb-3 line-clamp-2 text-[11px] leading-relaxed text-text-muted">
-          {quest.description}
+          {description}
         </p>
 
         {/* Tech Stack Chips */}
@@ -674,11 +719,11 @@ function QuestCardGrid({ quest, isFeatured, onSelect }: {
             <GitFork className="h-3 w-3" /> {quest.forks}
           </span>
           <span className="flex items-center gap-1 text-accent-gold">
-            <Zap className="h-3 w-3" /> {quest.xp} XP
+            <Zap className="h-3 w-3" /> {quest.xp} {t('questLog.xpUnit')}
           </span>
           {quest.updatedAt && (
             <span className="ml-auto text-[9px] opacity-60">
-              {formatDate(quest.updatedAt)}
+              {formatDate(quest.updatedAt!, i18n.resolvedLanguage ?? 'en')}
             </span>
           )}
         </div>
@@ -691,6 +736,10 @@ function QuestCardGrid({ quest, isFeatured, onSelect }: {
    QUEST CARD — LIST MODE
    ═══════════════════════════════════════════ */
 function QuestCardList({ quest, onSelect }: { quest: Quest; onSelect: () => void }) {
+  const { t } = useTranslation()
+  const description = quest.description || t('questLog.fallbackNoDescription')
+  const displayLanguage = quest.language === 'Unknown' ? t('questLog.unknownLanguage') : quest.language
+
   return (
     <motion.div
       layout
@@ -719,7 +768,7 @@ function QuestCardList({ quest, onSelect }: { quest: Quest; onSelect: () => void
       <div className="min-w-0 flex-1 pl-2 sm:pl-0">
         <div className="mb-1 flex flex-wrap items-center gap-2">
           <Circle className="h-2 w-2 shrink-0 fill-current" style={{ color: quest.langColor }} />
-          <span className="text-[10px] text-text-muted">{quest.language}</span>
+          <span className="text-[10px] text-text-muted">{displayLanguage}</span>
           <h3 className="truncate font-heading text-sm tracking-wide text-text-primary">
             {quest.name.replace(/-/g, ' ')}
           </h3>
@@ -731,7 +780,7 @@ function QuestCardList({ quest, onSelect }: { quest: Quest; onSelect: () => void
               border: `1px solid ${quest.statusColor}20`,
             }}
           >
-            {quest.status}
+            {getStatusLabel(quest.status, t)}
           </span>
           <span
             className="rounded-full px-1.5 py-0.5 text-[8px] tracking-wider uppercase"
@@ -741,14 +790,14 @@ function QuestCardList({ quest, onSelect }: { quest: Quest; onSelect: () => void
               border: `1px solid ${RARITY_COLORS[quest.rarity]}20`,
             }}
           >
-            {quest.rarity}
+            {getRarityLabel(quest.rarity, t)}
           </span>
         </div>
-        <p className="mb-2 line-clamp-1 text-[11px] text-text-muted">{quest.description}</p>
+        <p className="mb-2 line-clamp-1 text-[11px] text-text-muted">{description}</p>
         <div className="flex flex-wrap items-center gap-3 text-[10px] text-text-muted">
           <span className="flex items-center gap-1"><Star className="h-3 w-3" /> {quest.stars}</span>
           <span className="flex items-center gap-1"><GitFork className="h-3 w-3" /> {quest.forks}</span>
-          <span className="flex items-center gap-1 text-accent-gold"><Zap className="h-3 w-3" /> +{quest.xp} XP</span>
+          <span className="flex items-center gap-1 text-accent-gold"><Zap className="h-3 w-3" /> +{quest.xp} {t('questLog.xpUnit')}</span>
           {quest.techStack.slice(0, 3).map((t) => (
             <span key={t} className="rounded border border-border-subtle/20 bg-bg-primary/30 px-1.5 py-0.5 text-[9px]">{t}</span>
           ))}
@@ -767,6 +816,7 @@ function QuestCardList({ quest, onSelect }: { quest: Quest; onSelect: () => void
    LANGUAGE BREAKDOWN BAR
    ═══════════════════════════════════════════ */
 function LanguageBar({ languages }: { languages: Record<string, number> }) {
+  const { t } = useTranslation()
   const entries = useMemo(() => {
     const total = Object.values(languages).reduce((s, v) => s + v, 0)
     if (total === 0) return []
@@ -783,7 +833,7 @@ function LanguageBar({ languages }: { languages: Record<string, number> }) {
 
   return (
     <div>
-      <p className="mb-2 text-[10px] uppercase tracking-widest text-text-muted">Language Breakdown</p>
+      <p className="mb-2 text-[10px] uppercase tracking-widest text-text-muted">{t('questLog.languageBreakdown')}</p>
       <div className="flex h-2 overflow-hidden rounded-full bg-bg-primary/40">
         {entries.map((e) => (
           <motion.div
@@ -812,6 +862,7 @@ function LanguageBar({ languages }: { languages: Record<string, number> }) {
    SCORE GAUGE (SVG Arc)
    ═══════════════════════════════════════════ */
 function ScoreGauge({ score }: { score: number }) {
+  const { t } = useTranslation()
   const radius = 38
   const circumference = 2 * Math.PI * radius
   const progress = score / 100
@@ -841,7 +892,7 @@ function ScoreGauge({ score }: { score: number }) {
           {score}
         </text>
         <text x={48} y={58} textAnchor="middle" fontSize="7" fill="rgba(148,163,184,0.7)" fontFamily="Raleway, sans-serif" letterSpacing="1.5">
-          AI SCORE
+          {t('questLog.aiScore')}
         </text>
       </svg>
     </div>
@@ -851,18 +902,19 @@ function ScoreGauge({ score }: { score: number }) {
 /* ═══════════════════════════════════════════
    METRICS BARS
    ═══════════════════════════════════════════ */
-const METRIC_LABELS: Record<string, { label: string; icon: typeof FileCode }> = {
-  code_quality: { label: 'Code Quality', icon: FileCode },
-  documentation: { label: 'Documentation', icon: BookOpen },
-  testing: { label: 'Testing', icon: TestTube },
-  architecture: { label: 'Architecture', icon: Boxes },
-  security: { label: 'Security', icon: Shield },
+const METRIC_LABELS: Record<string, { key: string; icon: typeof FileCode }> = {
+  code_quality: { key: 'questLog.metricLabels.code_quality', icon: FileCode },
+  documentation: { key: 'questLog.metricLabels.documentation', icon: BookOpen },
+  testing: { key: 'questLog.metricLabels.testing', icon: TestTube },
+  architecture: { key: 'questLog.metricLabels.architecture', icon: Boxes },
+  security: { key: 'questLog.metricLabels.security', icon: Shield },
 }
 
 function MetricsBars({ metrics }: { metrics: Record<string, number> }) {
+  const { t } = useTranslation()
   return (
     <div className="space-y-2.5">
-      <p className="text-[10px] uppercase tracking-widest text-text-muted">AI Metrics</p>
+      <p className="text-[10px] uppercase tracking-widest text-text-muted">{t('questLog.aiMetrics')}</p>
       {Object.entries(metrics).map(([key, value], i) => {
         const color = value >= 80 ? '#22c55e' : value >= 60 ? '#3b82f6' : '#f0c040'
         const meta = METRIC_LABELS[key]
@@ -872,7 +924,7 @@ function MetricsBars({ metrics }: { metrics: Record<string, number> }) {
             <div className="mb-1 flex items-center justify-between text-[10px] text-text-muted">
               <span className="flex items-center gap-1.5">
                 <Icon className="h-3 w-3" style={{ color: `${color}80` }} />
-                {meta?.label || key}
+                {meta?.key ? t(meta.key) : key}
               </span>
               <span style={{ color }}>{value}</span>
             </div>
@@ -898,13 +950,14 @@ function MetricsBars({ metrics }: { metrics: Record<string, number> }) {
 function AIAnalysisPanel({ quest, onAnalyze, analyzing }: {
   quest: Quest; onAnalyze: () => void; analyzing: boolean
 }) {
+  const { t } = useTranslation()
   const hasAnalysis = quest.aiAnalysis.score > 0
 
   return (
     <div className="rounded-lg border border-accent-purple/20 bg-accent-purple/5 p-4">
       <div className="mb-3 flex items-center gap-2">
         <Wand2 className="h-4 w-4 text-accent-purple" />
-        <span className="font-heading text-xs uppercase tracking-wider text-accent-purple">AI Quest Analysis</span>
+        <span className="font-heading text-xs uppercase tracking-wider text-accent-purple">{t('questLog.aiPanelTitle')}</span>
       </div>
 
       {hasAnalysis ? (
@@ -925,7 +978,7 @@ function AIAnalysisPanel({ quest, onAnalyze, analyzing }: {
           {/* Strengths */}
           {quest.aiAnalysis.strengths.length > 0 && (
             <div>
-              <p className="mb-1.5 text-[10px] uppercase tracking-widest text-text-muted">Strengths</p>
+              <p className="mb-1.5 text-[10px] uppercase tracking-widest text-text-muted">{t('questLog.strengths')}</p>
               <div className="flex flex-wrap gap-1.5">
                 {quest.aiAnalysis.strengths.map((s) => (
                   <span key={s} className="rounded-md border border-accent-green/20 bg-accent-green/5 px-2 py-0.5 text-[10px] text-accent-green">
@@ -939,7 +992,7 @@ function AIAnalysisPanel({ quest, onAnalyze, analyzing }: {
           {/* Improvements */}
           {quest.aiAnalysis.improvements.length > 0 && (
             <div>
-              <p className="mb-1.5 text-[10px] uppercase tracking-widest text-text-muted">Improvements</p>
+              <p className="mb-1.5 text-[10px] uppercase tracking-widest text-text-muted">{t('questLog.improvements')}</p>
               <div className="flex flex-wrap gap-1.5">
                 {quest.aiAnalysis.improvements.map((s) => (
                   <span key={s} className="rounded-md border border-accent-gold/20 bg-accent-gold/5 px-2 py-0.5 text-[10px] text-accent-gold">
@@ -953,7 +1006,7 @@ function AIAnalysisPanel({ quest, onAnalyze, analyzing }: {
       ) : (
         <div className="py-4 text-center">
           <Wand2 className="mx-auto mb-2 h-8 w-8 text-accent-purple/25" />
-          <p className="mb-3 text-[11px] text-text-muted">No analysis yet. Let the Oracle examine this quest.</p>
+          <p className="mb-3 text-[11px] text-text-muted">{t('questLog.noAnalysis')}</p>
           <button
             onClick={onAnalyze}
             disabled={analyzing}
@@ -962,12 +1015,12 @@ function AIAnalysisPanel({ quest, onAnalyze, analyzing }: {
             {analyzing ? (
               <>
                 <Loader2 className="h-3 w-3 animate-spin" />
-                Analyzing...
+                {t('questLog.analyzing')}
               </>
             ) : (
               <>
                 <Wand2 className="h-3 w-3" />
-                Analyze Quest
+                {t('questLog.analyzeQuest')}
               </>
             )}
           </button>
@@ -987,6 +1040,9 @@ function QuestDetailPanel({ quest, onClose, onAnalyze, analyzing, languageBreakd
   analyzing: boolean
   languageBreakdown: Record<string, number> | null
 }) {
+  const { t } = useTranslation()
+  const description = quest.description || t('questLog.fallbackNoDescription')
+
   return (
     <motion.div
       initial={{ opacity: 0, x: 30 }}
@@ -1023,7 +1079,7 @@ function QuestDetailPanel({ quest, onClose, onAnalyze, analyzing, languageBreakd
                 border: `1px solid ${quest.statusColor}20`,
               }}
             >
-              {quest.status}
+              {getStatusLabel(quest.status, t)}
             </span>
             <span
               className="rounded-full px-2 py-0.5 text-[9px] font-medium tracking-wider uppercase"
@@ -1033,21 +1089,21 @@ function QuestDetailPanel({ quest, onClose, onAnalyze, analyzing, languageBreakd
                 border: `1px solid ${RARITY_COLORS[quest.rarity]}20`,
               }}
             >
-              {quest.rarity}
+              {getRarityLabel(quest.rarity, t)}
             </span>
             <span className="flex items-center gap-1 text-[11px] text-accent-gold">
-              <Zap className="h-3 w-3" /> +{quest.xp} XP
+              <Zap className="h-3 w-3" /> +{quest.xp} {t('questLog.xpUnit')}
             </span>
           </div>
         </div>
 
         {/* Description */}
-        <p className="text-[11px] leading-relaxed text-text-secondary">{quest.description}</p>
+        <p className="text-[11px] leading-relaxed text-text-secondary">{description}</p>
 
         {/* Tech Stack */}
         {quest.techStack.length > 0 && (
           <div>
-            <p className="mb-2 text-[10px] uppercase tracking-widest text-text-muted">Tech Stack</p>
+            <p className="mb-2 text-[10px] uppercase tracking-widest text-text-muted">{t('questLog.techStack')}</p>
             <div className="flex flex-wrap gap-1.5">
               {quest.techStack.map((tech) => (
                 <span key={tech} className="rounded-md border border-accent-blue/20 bg-accent-blue/5 px-2 py-0.5 text-[10px] text-accent-blue">
@@ -1061,10 +1117,10 @@ function QuestDetailPanel({ quest, onClose, onAnalyze, analyzing, languageBreakd
         {/* Quest Metrics */}
         <div className="grid grid-cols-2 gap-2">
           {[
-            { label: 'Stars', value: String(quest.stars), icon: Star },
-            { label: 'Forks', value: String(quest.forks), icon: GitFork },
-            { label: 'Issues', value: String(quest.openIssues ?? 0), icon: AlertTriangle },
-            { label: 'Size', value: quest.size ? formatSize(quest.size) : '—', icon: FileCode },
+            { label: t('questLog.metrics.stars'), value: String(quest.stars), icon: Star },
+            { label: t('questLog.metrics.forks'), value: String(quest.forks), icon: GitFork },
+            { label: t('questLog.metrics.issues'), value: String(quest.openIssues ?? 0), icon: AlertTriangle },
+            { label: t('questLog.metrics.size'), value: quest.size ? formatSize(quest.size) : t('questLog.stats.none'), icon: FileCode },
           ].map((m) => {
             const MIcon = m.icon
             return (
@@ -1094,7 +1150,7 @@ function QuestDetailPanel({ quest, onClose, onAnalyze, analyzing, languageBreakd
               className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-accent-purple/30 bg-accent-purple/10 py-2.5 text-[11px] font-medium tracking-wider text-accent-purple uppercase transition-all hover:bg-accent-purple/20 disabled:opacity-50"
             >
               {analyzing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Wand2 className="h-3 w-3" />}
-              {analyzing ? 'Analyzing...' : 'Analyze'}
+              {analyzing ? t('questLog.analyzing') : t('questLog.analyze')}
             </button>
           )}
           <a
@@ -1105,7 +1161,7 @@ function QuestDetailPanel({ quest, onClose, onAnalyze, analyzing, languageBreakd
             onClick={(e) => e.stopPropagation()}
           >
             <ExternalLink className="h-3 w-3" />
-            GitHub
+            {t('questLog.github')}
           </a>
         </div>
       </div>
@@ -1124,6 +1180,10 @@ function MobileQuestCard({ quest, isExpanded, onToggle, onAnalyze, analyzing, la
   analyzing: boolean
   languageBreakdown: Record<string, number> | null
 }) {
+  const { t } = useTranslation()
+  const description = quest.description || t('questLog.fallbackNoDescription')
+  const displayLanguage = quest.language === 'Unknown' ? t('questLog.unknownLanguage') : quest.language
+
   return (
     <motion.div
       layout
@@ -1151,16 +1211,16 @@ function MobileQuestCard({ quest, isExpanded, onToggle, onAnalyze, analyzing, la
                 border: `1px solid ${RARITY_COLORS[quest.rarity]}20`,
               }}
             >
-              {quest.rarity}
+              {getRarityLabel(quest.rarity, t)}
             </span>
           </div>
           <div className="flex items-center gap-3 text-[10px] text-text-muted">
             <span className="flex items-center gap-1">
               <Circle className="h-2 w-2 fill-current" style={{ color: quest.langColor }} />
-              {quest.language}
+              {displayLanguage}
             </span>
             <span className="flex items-center gap-1"><Star className="h-3 w-3" /> {quest.stars}</span>
-            <span className="flex items-center gap-1 text-accent-gold"><Zap className="h-3 w-3" /> +{quest.xp}</span>
+            <span className="flex items-center gap-1 text-accent-gold"><Zap className="h-3 w-3" /> +{quest.xp} {t('questLog.xpUnit')}</span>
           </div>
         </div>
         <ChevronDown className={`h-4 w-4 shrink-0 text-text-muted transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
@@ -1178,7 +1238,7 @@ function MobileQuestCard({ quest, isExpanded, onToggle, onAnalyze, analyzing, la
           >
             <div className="space-y-3 border-t border-border-subtle/20 px-3 pt-3 pb-4">
               <ProjectPreview quest={quest} />
-              <p className="text-[11px] leading-relaxed text-text-muted">{quest.description}</p>
+              <p className="text-[11px] leading-relaxed text-text-muted">{description}</p>
 
               {/* Tech chips */}
               <div className="flex flex-wrap gap-1">
@@ -1212,7 +1272,7 @@ function MobileQuestCard({ quest, isExpanded, onToggle, onAnalyze, analyzing, la
                   className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-border-subtle/30 bg-bg-primary/30 py-2 text-[10px] tracking-wider text-text-secondary uppercase"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <ExternalLink className="h-3 w-3" /> GitHub
+                  <ExternalLink className="h-3 w-3" /> {t('questLog.github')}
                 </a>
               </div>
             </div>
@@ -1227,6 +1287,7 @@ function MobileQuestCard({ quest, isExpanded, onToggle, onAnalyze, analyzing, la
    MAIN COMPONENT
    ═══════════════════════════════════════════ */
 export default function QuestLog() {
+  const { t } = useTranslation()
   /* ─── Data ─── */
   const { data: reposData } = useAPI(api.getRepos, FALLBACK_REPOS)
   const quests = useMemo(() => reposData.repos.map(repoToQuest), [reposData])
@@ -1340,8 +1401,8 @@ export default function QuestLog() {
   return (
     <motion.div variants={container} initial="hidden" animate="show">
       <PageHeader
-        title="Quest Log"
-        subtitle="Your GitHub adventures and conquered projects"
+        title={t('questLog.title')}
+        subtitle={t('questLog.subtitle')}
         gradient="linear-gradient(135deg, #3b82f6, #60a5fa, #2563eb)"
         glowColor="rgba(59, 130, 246, 0.25)"
       />
@@ -1369,7 +1430,7 @@ export default function QuestLog() {
             {filteredQuests.length === 0 ? (
               <div className="py-16 text-center">
                 <Search className="mx-auto mb-3 h-8 w-8 text-text-muted/30" />
-                <p className="text-sm text-text-muted">No quests found matching your filters.</p>
+                <p className="text-sm text-text-muted">{t('questLog.noQuestsFiltered')}</p>
               </div>
             ) : viewMode === 'grid' ? (
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -1419,7 +1480,7 @@ export default function QuestLog() {
         {filteredQuests.length === 0 ? (
           <div className="py-12 text-center">
             <Search className="mx-auto mb-3 h-8 w-8 text-text-muted/30" />
-            <p className="text-sm text-text-muted">No quests found.</p>
+            <p className="text-sm text-text-muted">{t('questLog.noQuests')}</p>
           </div>
         ) : (
           filteredQuests.map((quest) => {
@@ -1441,3 +1502,7 @@ export default function QuestLog() {
     </motion.div>
   )
 }
+
+
+
+

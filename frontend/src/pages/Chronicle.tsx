@@ -1,5 +1,6 @@
 import { useRef, useState, useMemo } from 'react'
 import { motion, useScroll, useTransform, useInView, AnimatePresence } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 import { ChevronDown } from 'lucide-react'
 import PageHeader from '../components/ui/PageHeader'
 import GlassCard from '../components/ui/GlassCard'
@@ -40,12 +41,12 @@ const itemVariants = {
 // ─── Category Config ────────────────────────────────────────────────────
 type CategoryKey = 'all' | 'experience' | 'education' | 'awards' | 'certifications'
 
-const CATEGORIES: { key: CategoryKey; label: string; color: string }[] = [
-  { key: 'all', label: 'All', color: '#e2e8f0' },
-  { key: 'experience', label: 'Experience', color: '#8b5cf6' },
-  { key: 'education', label: 'Education', color: '#22c55e' },
-  { key: 'awards', label: 'Awards', color: '#f0c040' },
-  { key: 'certifications', label: 'Certifications', color: '#3b82f6' },
+const CATEGORIES: { key: CategoryKey; labelKey: string; color: string }[] = [
+  { key: 'all', labelKey: 'chronicle.categories.all', color: '#e2e8f0' },
+  { key: 'experience', labelKey: 'chronicle.categories.experience', color: '#8b5cf6' },
+  { key: 'education', labelKey: 'chronicle.categories.education', color: '#22c55e' },
+  { key: 'awards', labelKey: 'chronicle.categories.awards', color: '#f0c040' },
+  { key: 'certifications', labelKey: 'chronicle.categories.certifications', color: '#3b82f6' },
 ]
 
 // ─── SVG Icons ──────────────────────────────────────────────────────────
@@ -224,17 +225,18 @@ function calcDuration(year: string, yearEnd: string | null): string {
 function ChronicleStatsBar({ entries }: { entries: TEntry[] }) {
   const ref = useRef<HTMLDivElement>(null)
   const isInView = useInView(ref, { once: true })
+  const { t } = useTranslation()
 
   const yearsActive = new Date().getFullYear() - 2018
   const rolesCount = entries.filter((e) => e.category === 'experience').length
   const awardsCount = entries.filter((e) => e.category === 'awards').length
-  const currentRole = entries.find((e) => e.id === 'exp-senai')?.title || 'AI Resident'
+  const currentRole = entries.find((e) => e.id === 'exp-senai')?.title || t('chronicle.stats.currentFallback')
 
   const stats = [
-    { label: 'Years Active', value: yearsActive, suffix: '+', color: '#f0c040', IconComp: IconYears },
-    { label: 'Roles Held', value: rolesCount, suffix: '', color: '#8b5cf6', IconComp: IconRoles },
-    { label: 'Awards Won', value: awardsCount, suffix: '', color: '#3b82f6', IconComp: IconAwards },
-    { label: 'Current', value: 0, suffix: '', color: '#22c55e', IconComp: IconCurrent, text: currentRole },
+    { label: t('chronicle.stats.yearsActive'), value: yearsActive, suffix: '+', color: '#f0c040', IconComp: IconYears },
+    { label: t('chronicle.stats.rolesHeld'), value: rolesCount, suffix: '', color: '#8b5cf6', IconComp: IconRoles },
+    { label: t('chronicle.stats.awardsWon'), value: awardsCount, suffix: '', color: '#3b82f6', IconComp: IconAwards },
+    { label: t('chronicle.stats.current'), value: 0, suffix: '', color: '#22c55e', IconComp: IconCurrent, text: currentRole },
   ]
 
   return (
@@ -293,6 +295,7 @@ function CategoryFilters({
   active: CategoryKey
   onChange: (key: CategoryKey) => void
 }) {
+  const { t } = useTranslation()
   return (
     <motion.div variants={itemVariants} className="mb-8 flex flex-wrap gap-2">
       {CATEGORIES.map((cat) => {
@@ -317,7 +320,7 @@ function CategoryFilters({
                 }}
               />
             )}
-            {cat.label}
+            {t(cat.labelKey)}
             {isActive && (
               <motion.div
                 layoutId="chronicle-filter-active"
@@ -380,6 +383,7 @@ const SKILL_COLORS: Record<string, string> = {
 function SkillsCloud({ entries }: { entries: TEntry[] }) {
   const ref = useRef<HTMLDivElement>(null)
   const isInView = useInView(ref, { once: true, margin: '-30px' })
+  const { t } = useTranslation()
 
   const allSkills = useMemo(() => {
     const map = new Map<string, number>()
@@ -403,7 +407,7 @@ function SkillsCloud({ entries }: { entries: TEntry[] }) {
       transition={{ duration: 0.5 }}
     >
       <p className="mb-4 font-heading text-xs tracking-wider text-text-muted uppercase">
-        Skills Constellation
+        {t('chronicle.skillsConstellation')}
       </p>
       <div className="flex flex-wrap gap-2">
         {allSkills.map(([skill, count], i) => {
@@ -449,6 +453,7 @@ function TimelineCard({
   isExpanded: boolean
   onToggle: () => void
 }) {
+  const { t } = useTranslation()
   const ref = useRef<HTMLDivElement>(null)
   const isInView = useInView(ref, { once: true, margin: '-40px' })
   const isLeft = index % 2 === 0
@@ -458,12 +463,12 @@ function TimelineCard({
 
   const categoryLabel =
     entry.category === 'experience'
-      ? 'Experience'
+      ? t('chronicle.categoryLabel.experience')
       : entry.category === 'education'
-        ? 'Education'
+        ? t('chronicle.categoryLabel.education')
         : entry.category === 'awards'
-          ? 'Award'
-          : 'Certification'
+          ? t('chronicle.categoryLabel.awards')
+          : t('chronicle.categoryLabel.certifications')
 
   const cardContent = (
     <div
@@ -517,7 +522,7 @@ function TimelineCard({
               className="h-1.5 w-1.5 rounded-full"
               style={{ backgroundColor: entry.color, animation: 'gold-pulse 2s ease-in-out infinite' }}
             />
-            Now
+            {t('chronicle.now')}
           </span>
         )}
       </div>
@@ -648,6 +653,7 @@ function TimelineCard({
 function CertificationsGrid({ entries }: { entries: TEntry[] }) {
   const ref = useRef<HTMLDivElement>(null)
   const isInView = useInView(ref, { once: true, margin: '-30px' })
+  const { t } = useTranslation()
   const certs = entries.filter((e) => e.category === 'certifications')
 
   if (certs.length === 0) return null
@@ -661,7 +667,7 @@ function CertificationsGrid({ entries }: { entries: TEntry[] }) {
       className="mt-8"
     >
       <p className="mb-4 font-heading text-xs tracking-wider text-text-muted uppercase">
-        Certifications Earned
+        {t('chronicle.certificationsEarned')}
       </p>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {certs.map((cert, i) => (
@@ -692,6 +698,7 @@ function CertificationsGrid({ entries }: { entries: TEntry[] }) {
 // ─── Main Chronicle Page ────────────────────────────────────────────────
 
 export default function Chronicle() {
+  const { t } = useTranslation()
   const { data } = useAPI(
     () => api.getTimeline(),
     { entries: FALLBACK_ENTRIES }
@@ -730,8 +737,8 @@ export default function Chronicle() {
   return (
     <motion.div variants={containerVariants} initial="hidden" animate="show">
       <PageHeader
-        title="Chronicle"
-        subtitle="A real journey through code, career, and conquest"
+        title={t('chronicle.title')}
+        subtitle={t('chronicle.subtitle')}
         gradient="linear-gradient(135deg, #f0c040, #e8a820, #d4940a)"
         glowColor="rgba(240, 192, 64, 0.2)"
       />
@@ -790,7 +797,7 @@ export default function Chronicle() {
                 animate={{ opacity: 1 }}
                 className="py-16 text-center"
               >
-                <p className="text-sm text-text-muted">No entries in this category yet.</p>
+                <p className="text-sm text-text-muted">{t('chronicle.noEntries')}</p>
               </motion.div>
             )}
           </div>

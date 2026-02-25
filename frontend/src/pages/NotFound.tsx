@@ -1,9 +1,11 @@
 import { motion } from 'motion/react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { Skull, ArrowLeft } from 'lucide-react'
 
 export default function NotFound() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
 
   return (
     <motion.div
@@ -36,7 +38,7 @@ export default function NotFound() {
         transition={{ delay: 0.3 }}
         className="mt-3 font-heading text-lg tracking-wider text-text-secondary"
       >
-        You wandered into the Dark Forest...
+        {t('notFound.subtitle')}
       </motion.p>
 
       <motion.p
@@ -45,7 +47,7 @@ export default function NotFound() {
         transition={{ delay: 0.4 }}
         className="mt-2 max-w-sm text-sm text-text-muted"
       >
-        This path leads nowhere. The quest you seek does not exist in this realm.
+        {t('notFound.description')}
       </motion.p>
 
       <motion.button
@@ -58,7 +60,7 @@ export default function NotFound() {
         whileTap={{ scale: 0.98 }}
       >
         <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
-        Return to Safety
+        {t('notFound.cta')}
       </motion.button>
     </motion.div>
   )

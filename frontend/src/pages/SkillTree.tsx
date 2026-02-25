@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 import {
   Palette, Server, Database, Lock, Crown, X,
   type LucideIcon,
@@ -21,11 +22,25 @@ const item = {
 }
 
 /* ─── Tier System ─── */
-const TIER_NAMES = ['Locked', 'Novice', 'Apprentice', 'Adept', 'Expert', 'Master'] as const
+type Translate = (key: string, options?: Record<string, unknown>) => string
+
+const TIER_KEY_BY_LEVEL = [
+  'skillTree.tiers.locked',
+  'skillTree.tiers.novice',
+  'skillTree.tiers.apprentice',
+  'skillTree.tiers.adept',
+  'skillTree.tiers.expert',
+  'skillTree.tiers.master',
+] as const
 const TIER_COLORS = ['#64748b', '#94a3b8', '#38bdf8', '#a78bfa', '#f59e0b', '#f0c040'] as const
 
-function getSkillTier(level: number) {
-  return { name: TIER_NAMES[level] ?? 'Locked', color: TIER_COLORS[level] ?? '#64748b' }
+function getSkillTier(level: number, t: Translate) {
+  const tierKey = TIER_KEY_BY_LEVEL[level] ?? TIER_KEY_BY_LEVEL[0]
+  return { name: t(tierKey), color: TIER_COLORS[level] ?? '#64748b' }
+}
+
+function getBranchLabel(branchId: string, fallback: string, t: Translate) {
+  return t(`skillTree.branches.${branchId}`, { defaultValue: fallback })
 }
 
 /* ─── Icon Maps ─── */
@@ -285,10 +300,10 @@ function computeStats(branches: Branch[]) {
   const maxLevels = branches.reduce((s, b) => s + b.skills.reduce((a, sk) => a + sk.maxLevel, 0), 0)
   const powerScore = maxLevels > 0 ? Math.round((totalLevels / maxLevels) * 100) : 0
 
-  let bestBranch = { name: '', score: 0, color: '' }
+  let bestBranch = { id: '', name: '', score: 0, color: '' }
   for (const b of branches) {
     const score = b.skills.reduce((a, sk) => a + sk.level, 0)
-    if (score > bestBranch.score) bestBranch = { name: b.name, score, color: b.color }
+    if (score > bestBranch.score) bestBranch = { id: b.id, name: b.name, score, color: b.color }
   }
 
   return { totalSkills, unlockedSkills, totalLevels, maxLevels, powerScore, bestBranch }
@@ -339,13 +354,20 @@ function StatIconStrongest({ color }: { color: string }) {
 
 /* ─── Stats Bar ─── */
 function StatsBar({ branches }: { branches: Branch[] }) {
+  const { t } = useTranslation()
   const s = useMemo(() => computeStats(branches), [branches])
 
   const cards = [
-    { label: 'Skills Unlocked', value: s.unlockedSkills, suffix: ` / ${s.totalSkills}`, color: '#f0c040', iconEl: StatIconUnlocked },
-    { label: 'Power Score', value: s.powerScore, suffix: '%', color: '#8b5cf6', iconEl: StatIconPower },
-    { label: 'Skill Points', value: s.totalLevels, suffix: ` / ${s.maxLevels}`, color: '#3b82f6', iconEl: StatIconPoints },
-    { label: 'Strongest', value: 0, display: s.bestBranch.name.split(' ')[0], color: s.bestBranch.color || '#22c55e', iconEl: StatIconStrongest },
+    { label: t('skillTree.stats.skillsUnlocked'), value: s.unlockedSkills, suffix: ` / ${s.totalSkills}`, color: '#f0c040', iconEl: StatIconUnlocked },
+    { label: t('skillTree.stats.powerScore'), value: s.powerScore, suffix: '%', color: '#8b5cf6', iconEl: StatIconPower },
+    { label: t('skillTree.stats.skillPoints'), value: s.totalLevels, suffix: ` / ${s.maxLevels}`, color: '#3b82f6', iconEl: StatIconPoints },
+    {
+      label: t('skillTree.stats.strongest'),
+      value: 0,
+      display: s.bestBranch.id ? getBranchLabel(s.bestBranch.id, s.bestBranch.name, t) : '-',
+      color: s.bestBranch.color || '#22c55e',
+      iconEl: StatIconStrongest,
+    },
   ]
 
   return (
@@ -391,6 +413,8 @@ function StatsBar({ branches }: { branches: Branch[] }) {
 function BranchFilters({ branches, activeBranch, onFilter }: {
   branches: Branch[]; activeBranch: string | null; onFilter: (id: string | null) => void
 }) {
+  const { t } = useTranslation()
+
   return (
     <motion.div variants={item} className="mb-5 flex flex-wrap items-center justify-center gap-2">
       <button
@@ -401,7 +425,7 @@ function BranchFilters({ branches, activeBranch, onFilter }: {
             : 'border-border-subtle/30 text-text-muted hover:border-border-subtle/60 hover:text-text-secondary'
         }`}
       >
-        All Branches
+        {t('skillTree.allBranches')}
       </button>
       {branches.map((b) => {
         const Icon = b.icon
@@ -422,7 +446,7 @@ function BranchFilters({ branches, activeBranch, onFilter }: {
             } : undefined}
           >
             <Icon className="h-3 w-3" />
-            {b.name}
+            {getBranchLabel(b.id, b.name, t)}
           </button>
         )
       })}
@@ -481,9 +505,10 @@ function TreeNode({ x, y, skill, color, delay, onClick, isSelected, isHovered, o
   delay: number; onClick: () => void; isSelected: boolean; isHovered: boolean
   onHover: (id: string | null) => void; branchId: string
 }) {
+  const { t } = useTranslation()
   const radius = skill.unlocked ? 20 : 15
   const SkillIcon = SKILL_ICONS[skill.id] || IconFallback
-  const tier = getSkillTier(skill.level)
+  const tier = getSkillTier(skill.level, t)
 
   // Progress arc
   const arcRadius = radius + 5
@@ -609,7 +634,7 @@ function TreeNode({ x, y, skill, color, delay, onClick, isSelected, isHovered, o
             fontFamily="Raleway, sans-serif"
             fill={color}
           >
-            Lv.{skill.level} {tier.name}
+            {t('navbar.level')}.{skill.level} {tier.name}
           </text>
         </motion.g>
       )}
@@ -619,6 +644,7 @@ function TreeNode({ x, y, skill, color, delay, onClick, isSelected, isHovered, o
 
 /* ─── Center Node ─── */
 function CenterNode({ cx, powerScore }: { cx: number; powerScore: number }) {
+  const { t } = useTranslation()
   const centerR = 32
   const arcR = centerR + 5
   const circ = 2 * Math.PI * arcR
@@ -683,12 +709,12 @@ function CenterNode({ cx, powerScore }: { cx: number; powerScore: number }) {
 
       {/* Label */}
       <text x={cx} y={CENTER_Y + 6} textAnchor="middle" fontSize="6.5" fill="rgba(240, 192, 64, 0.6)" fontFamily="Raleway, sans-serif" letterSpacing="1.5">
-        POWER
+        {t('skillTree.center.power')}
       </text>
 
       {/* Class title below */}
       <text x={cx} y={CENTER_Y + centerR + 16} textAnchor="middle" fontSize="10" fill="#f0c040" fontFamily="Cinzel, serif" letterSpacing="1">
-        Full-Stack Mage
+        {t('skillTree.center.classTitle')}
       </text>
     </motion.g>
   )
@@ -696,8 +722,9 @@ function CenterNode({ cx, powerScore }: { cx: number; powerScore: number }) {
 
 /* ─── Detail Panel ─── */
 function DetailPanel({ skill, branch, onClose }: { skill: SkillData; branch: Branch; onClose: () => void }) {
-  const tier = getSkillTier(skill.level)
-  const nextTier = skill.level < skill.maxLevel ? getSkillTier(skill.level + 1) : null
+  const { t } = useTranslation()
+  const tier = getSkillTier(skill.level, t)
+  const nextTier = skill.level < skill.maxLevel ? getSkillTier(skill.level + 1, t) : null
   const xpPerLevel = 50
   const skillXP = skill.level * xpPerLevel
   const maxXP = skill.maxLevel * xpPerLevel
@@ -723,7 +750,7 @@ function DetailPanel({ skill, branch, onClose }: { skill: SkillData; branch: Bra
           <div>
             <h3 className="font-heading text-sm tracking-wide text-text-primary">{skill.name}</h3>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] text-text-muted">{branch.name}</span>
+              <span className="text-[10px] text-text-muted">{getBranchLabel(branch.id, branch.name, t)}</span>
               {skill.unlocked && (
                 <span
                   className="rounded-full px-2 py-0.5 text-[9px] font-semibold tracking-wider"
@@ -746,7 +773,7 @@ function DetailPanel({ skill, branch, onClose }: { skill: SkillData; branch: Bra
       {/* Segmented level bar */}
       <div className="mb-4">
         <div className="mb-1.5 flex justify-between text-[10px] text-text-muted">
-          <span className="uppercase tracking-widest">Level</span>
+          <span className="uppercase tracking-widest">{t('skillTree.level')}</span>
           <span style={{ color: branch.color }}>{skill.level} / {skill.maxLevel}</span>
         </div>
         <div className="flex gap-1">
@@ -768,7 +795,7 @@ function DetailPanel({ skill, branch, onClose }: { skill: SkillData; branch: Bra
         <div className="mt-1 flex justify-between text-[9px]">
           {Array.from({ length: skill.maxLevel }).map((_, i) => (
             <span key={i} className="flex-1 text-center" style={{ color: i < skill.level ? `${branch.color}90` : '#2a2a5a' }}>
-              {TIER_NAMES[i + 1]?.slice(0, 3)}
+              {getSkillTier(i + 1, t).name.slice(0, 3)}
             </span>
           ))}
         </div>
@@ -777,7 +804,7 @@ function DetailPanel({ skill, branch, onClose }: { skill: SkillData; branch: Bra
       {/* XP Contribution */}
       {skill.unlocked && (
         <div className="mb-4 flex items-center justify-between rounded-lg border border-border-subtle/20 bg-bg-primary/40 px-3 py-2">
-          <span className="text-[10px] uppercase tracking-widest text-text-muted">XP Contribution</span>
+          <span className="text-[10px] uppercase tracking-widest text-text-muted">{t('skillTree.xpContribution')}</span>
           <span className="font-heading text-xs" style={{ color: branch.color }}>
             <AnimatedCounter value={skillXP} separator="" /> / {maxXP} XP
           </span>
@@ -790,7 +817,7 @@ function DetailPanel({ skill, branch, onClose }: { skill: SkillData; branch: Bra
       {/* Related Projects */}
       {skill.projects.length > 0 && (
         <div className="mb-4">
-          <p className="mb-1.5 text-[10px] uppercase tracking-widest text-text-muted">Related Quests</p>
+          <p className="mb-1.5 text-[10px] uppercase tracking-widest text-text-muted">{t('skillTree.relatedQuests')}</p>
           <div className="flex flex-wrap gap-1.5">
             {skill.projects.map((p) => (
               <span
@@ -809,7 +836,7 @@ function DetailPanel({ skill, branch, onClose }: { skill: SkillData; branch: Bra
       {!skill.unlocked ? (
         <div className="flex items-center gap-2 rounded-lg border border-accent-gold/20 bg-accent-gold/5 px-3 py-2">
           <Lock className="h-3 w-3 text-accent-gold" />
-          <span className="text-[10px] text-accent-gold">Requires higher level to unlock</span>
+          <span className="text-[10px] text-accent-gold">{t('skillTree.requiresHigherLevel')}</span>
         </div>
       ) : nextTier ? (
         <div
@@ -818,13 +845,17 @@ function DetailPanel({ skill, branch, onClose }: { skill: SkillData; branch: Bra
         >
           <Crown className="h-3 w-3" style={{ color: nextTier.color }} />
           <span className="text-[10px]" style={{ color: nextTier.color }}>
-            Next: {nextTier.name} — {skill.maxLevel - skill.level} level{skill.maxLevel - skill.level > 1 ? 's' : ''} remaining
+            {t('skillTree.nextTier', {
+              tier: nextTier.name,
+              remaining: skill.maxLevel - skill.level,
+              levelWord: skill.maxLevel - skill.level > 1 ? t('skillTree.levelWord.plural') : t('skillTree.levelWord.singular'),
+            })}
           </span>
         </div>
       ) : (
         <div className="flex items-center gap-2 rounded-lg border border-accent-gold/25 bg-accent-gold/8 px-3 py-2">
           <Crown className="h-3 w-3 text-accent-gold" />
-          <span className="text-[10px] font-semibold text-accent-gold">Mastery Achieved</span>
+          <span className="text-[10px] font-semibold text-accent-gold">{t('skillTree.masteryAchieved')}</span>
         </div>
       )}
     </motion.div>
@@ -838,6 +869,7 @@ function MobileSkillList({ branches, selectedSkill, onSelect, activeBranch }: {
   onSelect: (branchId: string, skillId: string) => void
   activeBranch: string | null
 }) {
+  const { t } = useTranslation()
   const [expandedLocal, setExpandedLocal] = useState<string | null>(null)
   const expanded = activeBranch ?? expandedLocal
   const setExpanded = (id: string | null) => setExpandedLocal(id)
@@ -868,10 +900,10 @@ function MobileSkillList({ branches, selectedSkill, onSelect, activeBranch }: {
                   <Icon className="h-5 w-5" style={{ color: branch.color }} />
                 </div>
                 <div>
-                  <h3 className="font-heading text-sm tracking-wide text-text-primary">{branch.name}</h3>
+                  <h3 className="font-heading text-sm tracking-wide text-text-primary">{getBranchLabel(branch.id, branch.name, t)}</h3>
                   <div className="mt-0.5 flex items-center gap-3 text-[10px] text-text-muted">
-                    <span>{unlockedCount}/{branch.skills.length} unlocked</span>
-                    <span style={{ color: branch.color }}>{totalLevel}/{maxLevel} pts</span>
+                    <span>{t('skillTree.unlockedCount', { unlocked: unlockedCount, total: branch.skills.length })}</span>
+                    <span style={{ color: branch.color }}>{t('skillTree.pointsShort', { points: totalLevel, max: maxLevel })}</span>
                   </div>
                 </div>
               </div>
@@ -898,7 +930,7 @@ function MobileSkillList({ branches, selectedSkill, onSelect, activeBranch }: {
                   <div className="mt-2 space-y-2 pl-2">
                     {branch.skills.map((skill) => {
                       const isSelected = selectedSkill?.branchId === branch.id && selectedSkill?.skillId === skill.id
-                      const tier = getSkillTier(skill.level)
+                      const tier = getSkillTier(skill.level, t)
                       const SIcon = SKILL_ICONS[skill.id] || IconFallback
                       return (
                         <motion.button
@@ -990,6 +1022,7 @@ function MobileSkillList({ branches, selectedSkill, onSelect, activeBranch }: {
    MAIN COMPONENT
    ═══════════════════════════════════════════ */
 export default function SkillTree() {
+  const { t } = useTranslation()
   const { data: skillsData } = useAPI(api.getSkills, FALLBACK_SKILLS)
   const [selectedSkill, setSelectedSkill] = useState<{ branchId: string; skillId: string } | null>(null)
   const [activeBranch, setActiveBranch] = useState<string | null>(null)
@@ -998,8 +1031,12 @@ export default function SkillTree() {
   const [svgSize, setSvgSize] = useState({ width: 800, height: 580 })
 
   const branches: Branch[] = useMemo(
-    () => skillsData.branches.map((b) => ({ ...b, icon: BRANCH_ICONS[b.id] || Database })),
-    [skillsData],
+    () => skillsData.branches.map((b) => ({
+      ...b,
+      name: getBranchLabel(b.id, b.name, t),
+      icon: BRANCH_ICONS[b.id] || Database,
+    })),
+    [skillsData, t],
   )
 
   const stats = useMemo(() => computeStats(branches), [branches])
@@ -1035,8 +1072,8 @@ export default function SkillTree() {
   return (
     <motion.div variants={container} initial="hidden" animate="show">
       <PageHeader
-        title="Skill Tree"
-        subtitle="Unlock abilities and master your craft as you level up"
+        title={t('skillTree.title')}
+        subtitle={t('skillTree.subtitle')}
         gradient="linear-gradient(135deg, #8b5cf6, #a78bfa, #6d3fd4)"
         glowColor="rgba(139, 92, 246, 0.25)"
       />
@@ -1209,7 +1246,10 @@ export default function SkillTree() {
                       fontFamily="Raleway, sans-serif"
                       fill={`${branch.color}80`}
                     >
-                      {branch.skills.reduce((s, sk) => s + sk.level, 0)} / {branch.skills.reduce((s, sk) => s + sk.maxLevel, 0)} pts
+                      {t('skillTree.branchProgressShort', {
+                        points: branch.skills.reduce((s, sk) => s + sk.level, 0),
+                        max: branch.skills.reduce((s, sk) => s + sk.maxLevel, 0),
+                      })}
                     </text>
                   </motion.g>
                 )
@@ -1220,22 +1260,22 @@ export default function SkillTree() {
             <div className="mt-2 flex items-center justify-center gap-6 text-[10px] text-text-muted">
               <span className="flex items-center gap-1.5">
                 <div className="h-2.5 w-2.5 rounded-full border border-accent-purple bg-accent-purple/20" />
-                Unlocked
+                {t('skillTree.legend.unlocked')}
               </span>
               <span className="flex items-center gap-1.5">
                 <div className="h-2.5 w-2.5 rounded-full border border-border-subtle bg-transparent" />
-                Locked
+                {t('skillTree.legend.locked')}
               </span>
               <span className="flex items-center gap-1.5">
                 <div
                   className="h-2.5 w-2.5 rounded-full"
                   style={{ border: '2px solid #f0c040', borderTopColor: 'transparent' }}
                 />
-                Progress Arc
+                {t('skillTree.legend.progressArc')}
               </span>
               <span className="flex items-center gap-1.5">
                 <Crown className="h-3 w-3 text-accent-gold" />
-                Class Center
+                {t('skillTree.legend.classCenter')}
               </span>
             </div>
           </div>
@@ -1263,3 +1303,4 @@ export default function SkillTree() {
     </motion.div>
   )
 }
+

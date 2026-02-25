@@ -1,5 +1,6 @@
 import { useRef, useState, useMemo } from 'react'
 import { motion, useInView, AnimatePresence } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 import {
   Pin,
   ExternalLink,
@@ -174,19 +175,23 @@ function IconLatest({ color = '#22c55e' }: { color?: string }) {
 function TavernStatsBar({ posts }: { posts: BlogPostData[] }) {
   const ref = useRef<HTMLDivElement>(null)
   const isInView = useInView(ref, { once: true })
+  const { t, i18n } = useTranslation()
 
   const totalPosts = posts.length
   const pinnedCount = posts.filter((p) => p.pinned).length
   const categories = new Set(posts.map((p) => p.category)).size
   const latestDate = posts.length > 0
-    ? new Date(posts.reduce((a, b) => a.created_at > b.created_at ? a : b).created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+    ? new Date(posts.reduce((a, b) => a.created_at > b.created_at ? a : b).created_at).toLocaleDateString(
+      i18n.resolvedLanguage === 'pt-BR' ? 'pt-BR' : 'en-US',
+      { month: 'short', year: 'numeric' },
+    )
     : 'N/A'
 
   const stats = [
-    { label: 'Total Posts', value: totalPosts, suffix: '', color: '#f0c040', IconComp: IconPosts },
-    { label: 'Pinned', value: pinnedCount, suffix: '', color: '#8b5cf6', IconComp: IconPinned },
-    { label: 'Categories', value: categories, suffix: '', color: '#3b82f6', IconComp: IconCategories },
-    { label: 'Latest', value: 0, suffix: '', color: '#22c55e', IconComp: IconLatest, text: latestDate },
+    { label: t('tavern.stats.totalPosts'), value: totalPosts, suffix: '', color: '#f0c040', IconComp: IconPosts },
+    { label: t('tavern.stats.pinned'), value: pinnedCount, suffix: '', color: '#8b5cf6', IconComp: IconPinned },
+    { label: t('tavern.stats.categories'), value: categories, suffix: '', color: '#3b82f6', IconComp: IconCategories },
+    { label: t('tavern.stats.latest'), value: 0, suffix: '', color: '#22c55e', IconComp: IconLatest, text: latestDate },
   ]
 
   return (
@@ -245,6 +250,15 @@ function CategoryFilters({
   active: CategoryKey
   onChange: (key: CategoryKey) => void
 }) {
+  const { t } = useTranslation()
+  const labelKeys: Record<CategoryKey, string> = {
+    all: 'tavern.filters.all',
+    update: 'tavern.filters.updates',
+    project: 'tavern.filters.projects',
+    achievement: 'tavern.filters.achievements',
+    thought: 'tavern.filters.thoughts',
+  }
+
   return (
     <motion.div variants={itemVariants} className="mb-6 flex flex-wrap gap-2">
       {CATEGORIES.map((cat) => {
@@ -262,7 +276,7 @@ function CategoryFilters({
             }}
           >
             <Icon className="h-3 w-3" />
-            {cat.label}
+            {t(labelKeys[cat.key])}
             {isActive && (
               <motion.div
                 layoutId="tavern-filter-active"
@@ -285,6 +299,7 @@ function PostCard({
 }: {
   post: BlogPostData
 }) {
+  const { t } = useTranslation()
   const ref = useRef<HTMLDivElement>(null)
   const isInView = useInView(ref, { once: true, margin: '-40px' })
   const [expanded, setExpanded] = useState(false)
@@ -320,7 +335,7 @@ function PostCard({
           {post.pinned && (
             <span className="flex items-center gap-1 text-[10px] font-semibold tracking-wider text-accent-gold uppercase">
               <Pin className="h-3 w-3" />
-              Pinned
+              {t('tavern.stats.pinned')}
             </span>
           )}
           <span
@@ -356,7 +371,7 @@ function PostCard({
             onClick={() => setExpanded(true)}
             className="mt-1 text-[11px] font-medium text-accent-purple hover:text-accent-purple/80"
           >
-            Read more...
+            {t('tavern.readMore')}
           </button>
         )}
 
@@ -386,7 +401,7 @@ function PostCard({
               onClick={() => setExpanded(false)}
               className="ml-auto text-[11px] text-text-muted hover:text-text-secondary"
             >
-              Collapse
+              {t('tavern.collapse')}
             </button>
           </div>
         )}
@@ -398,6 +413,7 @@ function PostCard({
 // ─── Social Links Panel ─────────────────────────────────────────────────
 
 function SocialLinksPanel() {
+  const { t } = useTranslation()
   const ref = useRef<HTMLDivElement>(null)
   const isInView = useInView(ref, { once: true, margin: '-30px' })
 
@@ -409,7 +425,7 @@ function SocialLinksPanel() {
       transition={{ duration: 0.5 }}
     >
       <p className="mb-4 font-heading text-xs tracking-wider text-text-muted uppercase">
-        Social Links
+        {t('tavern.socialLinks')}
       </p>
       <div className="relative z-20 space-y-2">
         {SOCIAL_LINKS.map((link) => (
@@ -430,7 +446,7 @@ function SocialLinksPanel() {
             </div>
             <div className="flex-1">
               <p className="text-sm font-medium text-text-primary">{link.name}</p>
-              <p className="text-[10px] text-text-muted">View profile</p>
+              <p className="text-[10px] text-text-muted">{t('tavern.viewProfile')}</p>
             </div>
             <ExternalLink className="h-3.5 w-3.5 text-text-muted transition-colors group-hover:text-text-secondary" />
           </a>
@@ -443,6 +459,7 @@ function SocialLinksPanel() {
 // ─── Tag Cloud ──────────────────────────────────────────────────────────
 
 function TagCloud({ posts }: { posts: BlogPostData[] }) {
+  const { t } = useTranslation()
   const ref = useRef<HTMLDivElement>(null)
   const isInView = useInView(ref, { once: true, margin: '-30px' })
 
@@ -470,7 +487,7 @@ function TagCloud({ posts }: { posts: BlogPostData[] }) {
       transition={{ duration: 0.5 }}
     >
       <p className="mb-4 font-heading text-xs tracking-wider text-text-muted uppercase">
-        Tag Cloud
+        {t('tavern.tagCloud')}
       </p>
       <div className="flex flex-wrap gap-2">
         {allTags.map(([tag, count], i) => {
@@ -497,6 +514,7 @@ function TagCloud({ posts }: { posts: BlogPostData[] }) {
 // ─── Pinned Post Highlight ──────────────────────────────────────────────
 
 function PinnedHighlight({ post }: { post: BlogPostData | undefined }) {
+  const { t } = useTranslation()
   const ref = useRef<HTMLDivElement>(null)
   const isInView = useInView(ref, { once: true, margin: '-30px' })
 
@@ -510,7 +528,7 @@ function PinnedHighlight({ post }: { post: BlogPostData | undefined }) {
       transition={{ duration: 0.5 }}
     >
       <p className="mb-4 font-heading text-xs tracking-wider text-text-muted uppercase">
-        Featured Scroll
+        {t('tavern.featuredScroll')}
       </p>
       <GlassCard
         accentColor={`${post.color}40`}
@@ -543,6 +561,7 @@ function PinnedHighlight({ post }: { post: BlogPostData | undefined }) {
 // ─── Main TavernBoard Page ──────────────────────────────────────────────
 
 export default function TavernBoard() {
+  const { t } = useTranslation()
   const { data, loading } = useAPI(
     () => api.getBlogPosts(),
     { posts: FALLBACK_POSTS, total: FALLBACK_POSTS.length }
@@ -567,8 +586,8 @@ export default function TavernBoard() {
   return (
     <motion.div variants={containerVariants} initial="hidden" animate="show">
       <PageHeader
-        title="Tavern Board"
-        subtitle="Pin your stories, share your journey"
+        title={t('tavern.title')}
+        subtitle={t('tavern.subtitle')}
         gradient="linear-gradient(135deg, #8b5cf6, #a78bfa, #c4b5fd)"
         glowColor="rgba(139, 92, 246, 0.2)"
       />
@@ -588,7 +607,7 @@ export default function TavernBoard() {
           {loading && posts.length === 0 && (
             <div className="py-16 text-center">
               <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-2 border-accent-purple/30 border-t-accent-purple" />
-              <p className="text-sm text-text-muted">Loading posts...</p>
+              <p className="text-sm text-text-muted">{t('tavern.loadingPosts')}</p>
             </div>
           )}
 
@@ -608,7 +627,7 @@ export default function TavernBoard() {
               className="py-16 text-center"
             >
               <FileText className="mx-auto mb-3 h-10 w-10 text-text-muted/30" />
-              <p className="text-sm text-text-muted">No posts in this category yet.</p>
+              <p className="text-sm text-text-muted">{t('tavern.noPostsCategory')}</p>
             </motion.div>
           )}
         </div>

@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 import { useGamification } from '../../contexts/GamificationContext'
 import { useTheme } from '../../contexts/ThemeContext'
+import LanguageSwitcher from '../ui/LanguageSwitcher'
 import {
   Swords,
   GitBranch,
@@ -19,13 +21,13 @@ import {
 } from 'lucide-react'
 
 const NAV_ITEMS = [
-  { path: '/', label: 'Hero', icon: Swords, subtitle: 'Home Base' },
-  { path: '/skills', label: 'Skill Tree', icon: GitBranch, subtitle: 'Abilities' },
-  { path: '/quests', label: 'Quest Log', icon: ScrollText, subtitle: 'Projects' },
-  { path: '/chronicle', label: 'Chronicle', icon: BookOpen, subtitle: 'Timeline' },
-  { path: '/guild', label: 'Guild Hall', icon: Castle, subtitle: 'Resume' },
-  { path: '/oracle', label: 'Oracle', icon: Sparkles, subtitle: 'AI Advisor' },
-  { path: '/tavern', label: 'Tavern', icon: MessageSquare, subtitle: 'Blog & Social' },
+  { path: '/', labelKey: 'navbar.hero', icon: Swords, subtitleKey: 'navbar.homeBase' },
+  { path: '/skills', labelKey: 'navbar.skillTree', icon: GitBranch, subtitleKey: 'navbar.abilities' },
+  { path: '/quests', labelKey: 'navbar.questLog', icon: ScrollText, subtitleKey: 'navbar.projects' },
+  { path: '/chronicle', labelKey: 'navbar.chronicle', icon: BookOpen, subtitleKey: 'navbar.timeline' },
+  { path: '/guild', labelKey: 'navbar.guildHall', icon: Castle, subtitleKey: 'navbar.resume' },
+  { path: '/oracle', labelKey: 'navbar.oracle', icon: Sparkles, subtitleKey: 'navbar.aiAdvisor' },
+  { path: '/tavern', labelKey: 'navbar.tavern', icon: MessageSquare, subtitleKey: 'navbar.blogSocial' },
 ]
 
 function OrnamentalDivider() {
@@ -45,6 +47,7 @@ function OrnamentalDivider() {
 function XPBar() {
   const [profileData, setProfileData] = useState({ level: 15, xp: 6450, xp_next_level: 10000 })
   const { profileVersion } = useGamification()
+  const { t } = useTranslation()
 
   useEffect(() => {
     fetch((import.meta.env.VITE_API_URL || '/api') + '/gamification/profile')
@@ -70,7 +73,7 @@ function XPBar() {
           <div className="flex items-center gap-1.5">
             <Shield className="h-3.5 w-3.5 text-accent-gold" />
             <span className="font-heading text-[11px] font-semibold tracking-wider text-accent-gold uppercase">
-              Level {profileData.level}
+              {t('navbar.level')} {profileData.level}
             </span>
           </div>
           <span className="font-body text-[10px] text-text-muted">
@@ -106,6 +109,7 @@ function XPBar() {
 
 function ThemeToggle() {
   const { toggleTheme, isDark } = useTheme()
+  const { t } = useTranslation()
   return (
     <div className="px-4 pb-2">
       <button
@@ -124,7 +128,7 @@ function ThemeToggle() {
           )}
         </motion.div>
         <span className="font-heading text-[11px] tracking-wider text-text-muted">
-          {isDark ? 'Dark Realm' : 'Light Realm'}
+          {isDark ? t('navbar.darkRealm') : t('navbar.lightRealm')}
         </span>
       </button>
     </div>
@@ -134,6 +138,7 @@ function ThemeToggle() {
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const location = useLocation()
+  const { t } = useTranslation()
 
   return (
     <>
@@ -141,7 +146,7 @@ export default function Navbar() {
       <button
         onClick={() => setMobileOpen(!mobileOpen)}
         className="fixed top-4 left-4 z-50 flex h-10 w-10 items-center justify-center rounded-lg border border-border-subtle bg-bg-secondary/90 backdrop-blur-sm lg:hidden"
-        aria-label="Toggle navigation"
+        aria-label={t('navbar.toggleNavigation')}
       >
         {mobileOpen ? (
           <X className="h-5 w-5 text-accent-gold" />
@@ -209,7 +214,7 @@ export default function Navbar() {
                 DevQuest
               </h1>
               <p className="font-body text-[10px] font-light tracking-[0.2em] text-text-muted uppercase">
-                Career Intelligence
+                {t('navbar.brandSubtitle')}
               </p>
             </div>
           </motion.div>
@@ -293,10 +298,10 @@ export default function Navbar() {
                           isActive ? 'text-accent-gold' : 'text-text-secondary group-hover:text-text-primary'
                         }`}
                       >
-                        {item.label}
+                        {t(item.labelKey)}
                       </span>
                       <span className="text-[10px] font-light text-text-muted">
-                        {item.subtitle}
+                        {t(item.subtitleKey)}
                       </span>
                     </div>
 
@@ -317,6 +322,8 @@ export default function Navbar() {
         </div>
 
         <OrnamentalDivider />
+
+        <LanguageSwitcher />
 
         {/* Theme toggle */}
         <ThemeToggle />
