@@ -1,9 +1,7 @@
-import { useRef, useState, useMemo, useCallback } from 'react'
+import { useRef, useState, useMemo } from 'react'
 import { motion, useInView, AnimatePresence } from 'motion/react'
 import {
   Pin,
-  Edit3,
-  Trash2,
   ExternalLink,
   Calendar,
   Tag,
@@ -16,8 +14,7 @@ import {
 import PageHeader from '../components/ui/PageHeader'
 import GlassCard from '../components/ui/GlassCard'
 import AnimatedCounter from '../components/ui/AnimatedCounter'
-import Modal from '../components/ui/Modal'
-import { api, type BlogPostData, type BlogPostCreate } from '../services/api'
+import { api, type BlogPostData } from '../services/api'
 import { useAPI } from '../hooks/useAPI'
 import { SOCIAL_LINKS, type SocialLinkName } from '../config/socialLinks'
 
@@ -285,12 +282,8 @@ function CategoryFilters({
 
 function PostCard({
   post,
-  onEdit,
-  onDelete,
 }: {
   post: BlogPostData
-  onEdit: (post: BlogPostData) => void
-  onDelete: (post: BlogPostData) => void
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const isInView = useInView(ref, { once: true, margin: '-40px' })
@@ -387,31 +380,16 @@ function PostCard({
           </div>
         )}
 
-        {/* Actions */}
-        <div className="mt-4 flex items-center gap-2 border-t border-border-subtle/30 pt-3">
-          <button
-            onClick={() => onEdit(post)}
-            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] text-text-muted transition-colors hover:bg-accent-purple/10 hover:text-accent-purple"
-          >
-            <Edit3 className="h-3 w-3" />
-            Edit
-          </button>
-          <button
-            onClick={() => onDelete(post)}
-            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] text-text-muted transition-colors hover:bg-red-500/10 hover:text-red-400"
-          >
-            <Trash2 className="h-3 w-3" />
-            Delete
-          </button>
-          {expanded && (
+        {expanded && (
+          <div className="mt-4 flex items-center border-t border-border-subtle/30 pt-3">
             <button
               onClick={() => setExpanded(false)}
               className="ml-auto text-[11px] text-text-muted hover:text-text-secondary"
             >
               Collapse
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </GlassCard>
     </motion.div>
   )
@@ -562,213 +540,6 @@ function PinnedHighlight({ post }: { post: BlogPostData | undefined }) {
   )
 }
 
-// ─── Create/Edit Modal ──────────────────────────────────────────────────
-
-function PostFormModal({
-  open,
-  onClose,
-  onSave,
-  initialData,
-}: {
-  open: boolean
-  onClose: () => void
-  onSave: (data: BlogPostCreate) => void
-  initialData?: BlogPostData | null
-}) {
-  const [title, setTitle] = useState(initialData?.title ?? '')
-  const [content, setContent] = useState(initialData?.content ?? '')
-  const [category, setCategory] = useState(initialData?.category ?? 'update')
-  const [tags, setTags] = useState(initialData?.tags ?? '')
-  const [pinned, setPinned] = useState(initialData?.pinned ?? false)
-  const [showPreview, setShowPreview] = useState(false)
-
-  const handleSubmit = () => {
-    if (!title.trim() || !content.trim()) return
-    onSave({
-      title: title.trim(),
-      content: content.trim(),
-      category,
-      tags: tags.trim(),
-      color: CATEGORY_COLORS[category] || '#8b5cf6',
-      pinned,
-    })
-  }
-
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title={initialData ? 'Edit Post' : 'New Post'}
-      accentColor={CATEGORY_COLORS[category] || '#8b5cf6'}
-    >
-      <div className="space-y-4">
-        {/* Title */}
-        <div>
-          <label className="mb-1 block text-[11px] font-medium tracking-wider text-text-muted uppercase">
-            Title
-          </label>
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Your post title..."
-            className="w-full rounded-lg border border-border-subtle/40 bg-bg-primary/60 px-3 py-2 text-sm text-text-primary placeholder-text-muted/50 outline-none transition-colors focus:border-accent-purple/50"
-          />
-        </div>
-
-        {/* Content */}
-        <div>
-          <div className="mb-1 flex items-center justify-between">
-            <label className="text-[11px] font-medium tracking-wider text-text-muted uppercase">
-              Content (Markdown)
-            </label>
-            <button
-              onClick={() => setShowPreview(!showPreview)}
-              className="text-[10px] text-accent-purple hover:text-accent-purple/80"
-            >
-              {showPreview ? 'Edit' : 'Preview'}
-            </button>
-          </div>
-          {showPreview ? (
-            <div
-              className="min-h-[160px] rounded-lg border border-border-subtle/40 bg-bg-primary/60 p-3 text-xs leading-relaxed text-text-secondary"
-              dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }}
-            />
-          ) : (
-            <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Write your post in markdown..."
-              rows={8}
-              className="w-full resize-y rounded-lg border border-border-subtle/40 bg-bg-primary/60 px-3 py-2 text-sm text-text-primary placeholder-text-muted/50 outline-none transition-colors focus:border-accent-purple/50"
-            />
-          )}
-        </div>
-
-        {/* Category */}
-        <div>
-          <label className="mb-1 block text-[11px] font-medium tracking-wider text-text-muted uppercase">
-            Category
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {(['update', 'project', 'achievement', 'thought'] as const).map((cat) => {
-              const color = CATEGORY_COLORS[cat]
-              const isSelected = category === cat
-              return (
-                <button
-                  key={cat}
-                  onClick={() => setCategory(cat)}
-                  className="rounded-full border px-3 py-1 text-xs font-medium capitalize transition-all"
-                  style={{
-                    borderColor: isSelected ? `${color}60` : 'var(--color-surface-dim)',
-                    backgroundColor: isSelected ? `${color}15` : 'transparent',
-                    color: isSelected ? color : '#94a3b8',
-                  }}
-                >
-                  {cat}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Tags */}
-        <div>
-          <label className="mb-1 block text-[11px] font-medium tracking-wider text-text-muted uppercase">
-            Tags (comma-separated)
-          </label>
-          <input
-            type="text"
-            value={tags}
-            onChange={(e) => setTags(e.target.value)}
-            placeholder="react, typescript, ai..."
-            className="w-full rounded-lg border border-border-subtle/40 bg-bg-primary/60 px-3 py-2 text-sm text-text-primary placeholder-text-muted/50 outline-none transition-colors focus:border-accent-purple/50"
-          />
-        </div>
-
-        {/* Pinned toggle */}
-        <label className="flex cursor-pointer items-center gap-3">
-          <div
-            className={`relative h-5 w-9 rounded-full transition-colors ${pinned ? 'bg-accent-gold/40' : 'bg-bg-primary'}`}
-            onClick={() => setPinned(!pinned)}
-          >
-            <div
-              className={`absolute top-0.5 h-4 w-4 rounded-full transition-all ${
-                pinned ? 'left-[18px] bg-accent-gold' : 'left-0.5 bg-text-muted/40'
-              }`}
-            />
-          </div>
-          <span className="text-xs text-text-secondary">Pin this post</span>
-        </label>
-
-        {/* Actions */}
-        <div className="flex justify-end gap-3 pt-2">
-          <button
-            onClick={onClose}
-            className="rounded-lg border border-border-subtle/40 px-4 py-2 text-xs text-text-muted transition-colors hover:bg-bg-card"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={!title.trim() || !content.trim()}
-            className="rounded-lg px-4 py-2 text-xs font-medium text-white transition-all disabled:opacity-40"
-            style={{
-              background: `linear-gradient(135deg, ${CATEGORY_COLORS[category] || '#8b5cf6'}, ${CATEGORY_COLORS[category] || '#8b5cf6'}cc)`,
-            }}
-          >
-            {initialData ? 'Save Changes' : 'Publish Post'}
-          </button>
-        </div>
-      </div>
-    </Modal>
-  )
-}
-
-// ─── Delete Confirmation Modal ──────────────────────────────────────────
-
-function DeleteConfirmModal({
-  post,
-  onClose,
-  onConfirm,
-}: {
-  post: BlogPostData | null
-  onClose: () => void
-  onConfirm: () => void
-}) {
-  return (
-    <Modal
-      open={!!post}
-      onClose={onClose}
-      title="Delete Post"
-      accentColor="#ef4444"
-    >
-      <p className="mb-2 text-sm text-text-secondary">
-        Are you sure you want to delete this post?
-      </p>
-      {post && (
-        <p className="mb-6 rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2 font-heading text-sm text-text-primary">
-          {post.title}
-        </p>
-      )}
-      <div className="flex justify-end gap-3">
-        <button
-          onClick={onClose}
-          className="rounded-lg border border-border-subtle/40 px-4 py-2 text-xs text-text-muted transition-colors hover:bg-bg-card"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={onConfirm}
-          className="rounded-lg bg-red-500/80 px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-red-500"
-        >
-          Delete
-        </button>
-      </div>
-    </Modal>
-  )
-}
-
 // ─── Main TavernBoard Page ──────────────────────────────────────────────
 
 export default function TavernBoard() {
@@ -777,20 +548,8 @@ export default function TavernBoard() {
     { posts: FALLBACK_POSTS, total: FALLBACK_POSTS.length }
   )
 
-  const [additions, setAdditions] = useState<BlogPostData[]>([])
-  const [deletedIds, setDeletedIds] = useState<number[]>([])
-  const [edits, setEdits] = useState<Record<number, BlogPostData>>({})
   const [activeCategory, setActiveCategory] = useState<CategoryKey>('all')
-  const [editingPost, setEditingPost] = useState<BlogPostData | null>(null)
-  const [deletingPost, setDeletingPost] = useState<BlogPostData | null>(null)
-
-  // Derive posts from API data + local mutations (no setState in effects)
-  const posts = useMemo(() => {
-    const base = data.posts
-      .filter((p) => !deletedIds.includes(p.id))
-      .map((p) => edits[p.id] || p)
-    return [...additions, ...base]
-  }, [data.posts, additions, deletedIds, edits])
+  const posts = data.posts
 
   const filteredPosts = useMemo(() => {
     let result = posts
@@ -804,30 +563,6 @@ export default function TavernBoard() {
   }, [posts, activeCategory])
 
   const pinnedPost = useMemo(() => posts.find((p) => p.pinned), [posts])
-
-  const handleEdit = useCallback(async (formData: BlogPostCreate) => {
-    if (!editingPost) return
-    const result = await api.updateBlogPost(editingPost.id, formData)
-    const updated: BlogPostData = result ?? {
-      ...editingPost,
-      ...formData,
-      category: (formData.category || editingPost.category) as BlogPostData['category'],
-      color: formData.color || editingPost.color,
-      updated_at: new Date().toISOString(),
-    }
-    // Update in edits map or in additions list
-    setEdits((prev) => ({ ...prev, [editingPost.id]: updated }))
-    setAdditions((prev) => prev.map((p) => (p.id === editingPost.id ? updated : p)))
-    setEditingPost(null)
-  }, [editingPost])
-
-  const handleDelete = useCallback(async () => {
-    if (!deletingPost) return
-    await api.deleteBlogPost(deletingPost.id)
-    setDeletedIds((prev) => [...prev, deletingPost.id])
-    setAdditions((prev) => prev.filter((p) => p.id !== deletingPost.id))
-    setDeletingPost(null)
-  }, [deletingPost])
 
   return (
     <motion.div variants={containerVariants} initial="hidden" animate="show">
@@ -862,8 +597,6 @@ export default function TavernBoard() {
               <PostCard
                 key={post.id}
                 post={post}
-                onEdit={setEditingPost}
-                onDelete={setDeletingPost}
               />
             ))}
           </AnimatePresence>
@@ -888,22 +621,6 @@ export default function TavernBoard() {
         </div>
       </div>
 
-      {/* Modals */}
-      {editingPost && (
-        <PostFormModal
-          key={`edit-${editingPost.id}`}
-          open={true}
-          onClose={() => setEditingPost(null)}
-          onSave={handleEdit}
-          initialData={editingPost}
-        />
-      )}
-
-      <DeleteConfirmModal
-        post={deletingPost}
-        onClose={() => setDeletingPost(null)}
-        onConfirm={handleDelete}
-      />
     </motion.div>
   )
 }
