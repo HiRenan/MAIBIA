@@ -10,6 +10,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+from app.services.llm_tools_oracle import OracleToolRuntime
 from app.services.llm_client import LLMClient, LLMClientError
 from app.services.mock_ai import oracle_chat
 
@@ -66,6 +67,7 @@ class OracleServiceResult:
     text: str
     topic: str
     source: str
+    reason: str | None = None
 
 
 @lru_cache(maxsize=4)
@@ -252,6 +254,7 @@ def _build_safe_refusal_response() -> OracleServiceResult:
         text=_limit_response_text(safe_text),
         topic="safety",
         source="security_refusal",
+        reason="malicious_or_sensitive_request",
     )
 
 
@@ -268,7 +271,7 @@ def _fallback_result(user_message: str, profile: dict | None, skills: list[dict]
             "Want me to suggest a 7-day plan?"
         )
     logger.warning("oracle_fallback_used reason=%s topic=%s", reason, topic)
-    return OracleServiceResult(text=text, topic=topic, source=f"fallback:{reason}")
+    return OracleServiceResult(text=text, topic=topic, source="fallback_mock", reason=reason)
 
 
 async def generate_oracle_reply(
@@ -339,10 +342,16 @@ async def generate_oracle_reply(
     )
 
     client = llm_client or LLMClient()
+    tool_runtime = OracleToolRuntime(
+        profile=profile,
+        skills=skills,
+        history=_build_recent_context(recent_history),
+    )
     try:
         response_text = await client.generate_oracle_text(
             instructions=instructions,
             input_text=model_input,
+            tool_runtime=tool_runtime,
         )
     except LLMClientError as exc:
         logger.warning("oracle_llm_failed error=%s", exc.__class__.__name__)
@@ -364,4 +373,4 @@ async def generate_oracle_reply(
         return _build_safe_refusal_response()
 
     topic = infer_topic(safe_user_message, normalized_text)
-    return OracleServiceResult(text=normalized_text, topic=topic, source="llm")
+    return OracleServiceResult(text=normalized_text, topic=topic, source="llm", reason=None)

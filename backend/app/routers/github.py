@@ -1,11 +1,14 @@
-"""GitHub API integration - real data from github.com/HiRenan."""
+"""GitHub API integration and repository analysis flows."""
+
+from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter
 import httpx
+from fastapi import APIRouter, Request
 
 from app.services.repo_analysis_service import analyze_repository
+from app.services.response_envelope import failure_response, request_id_from_request, success
 
 router = APIRouter(prefix="/github", tags=["github"])
 GITHUB_USER = "HiRenan"
@@ -64,8 +67,9 @@ def _calculate_status(repo: dict) -> str:
 
 
 @router.get("/repos")
-async def get_repos():
+async def get_repos(request: Request):
     """Fetch real repos from GitHub API, enriched with RPG metadata."""
+    request_id = request_id_from_request(request)
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.get(
@@ -74,40 +78,60 @@ async def get_repos():
                 headers={"Accept": "application/vnd.github.v3+json"},
             )
         if resp.status_code != 200:
-            return {"repos": FALLBACK_REPOS, "source": "fallback"}
+            return success(
+                flow="repo",
+                request_id=request_id,
+                source="fallback",
+                reason=f"github_status_{resp.status_code}",
+                data={"repos": FALLBACK_REPOS, "source": "fallback"},
+            )
 
         repos = resp.json()
         quests = []
         for repo in repos:
             if repo.get("fork"):
                 continue
-            quests.append({
-                "name": repo["name"],
-                "description": repo.get("description") or "No description",
-                "language": repo.get("language") or "Unknown",
-                "stars": repo.get("stargazers_count", 0),
-                "forks": repo.get("forks_count", 0),
-                "status": _calculate_status(repo),
-                "rarity": _calculate_rarity(repo.get("stargazers_count", 0)),
-                "xp": _calculate_xp(repo),
-                "html_url": repo.get("html_url", ""),
-                "updated_at": repo.get("updated_at", ""),
-                "homepage": repo.get("homepage") or "",
-                "topics": repo.get("topics", []),
-                "created_at": repo.get("created_at", ""),
-                "size": repo.get("size", 0),
-                "open_issues_count": repo.get("open_issues_count", 0),
-                "has_pages": repo.get("has_pages", False),
-                "owner": repo.get("owner", {}).get("login", GITHUB_USER),
-            })
-        return {"repos": quests, "source": "github"}
-    except Exception:
-        return {"repos": FALLBACK_REPOS, "source": "fallback"}
+            quests.append(
+                {
+                    "name": repo["name"],
+                    "description": repo.get("description") or "No description",
+                    "language": repo.get("language") or "Unknown",
+                    "stars": repo.get("stargazers_count", 0),
+                    "forks": repo.get("forks_count", 0),
+                    "status": _calculate_status(repo),
+                    "rarity": _calculate_rarity(repo.get("stargazers_count", 0)),
+                    "xp": _calculate_xp(repo),
+                    "html_url": repo.get("html_url", ""),
+                    "updated_at": repo.get("updated_at", ""),
+                    "homepage": repo.get("homepage") or "",
+                    "topics": repo.get("topics", []),
+                    "created_at": repo.get("created_at", ""),
+                    "size": repo.get("size", 0),
+                    "open_issues_count": repo.get("open_issues_count", 0),
+                    "has_pages": repo.get("has_pages", False),
+                    "owner": repo.get("owner", {}).get("login", GITHUB_USER),
+                }
+            )
+        return success(
+            flow="repo",
+            request_id=request_id,
+            source="github",
+            data={"repos": quests, "source": "github"},
+        )
+    except Exception as exc:  # noqa: BLE001
+        return success(
+            flow="repo",
+            request_id=request_id,
+            source="fallback",
+            reason=exc.__class__.__name__,
+            data={"repos": FALLBACK_REPOS, "source": "fallback"},
+        )
 
 
 @router.get("/repos/{owner}/{repo}")
-async def get_repo_detail(owner: str, repo: str):
+async def get_repo_detail(request: Request, owner: str, repo: str):
     """Get single repo details with language breakdown."""
+    request_id = request_id_from_request(request)
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.get(
@@ -119,50 +143,104 @@ async def get_repo_detail(owner: str, repo: str):
                 headers={"Accept": "application/vnd.github.v3+json"},
             )
         if resp.status_code != 200:
-            return {"error": "Repository not found"}
+            return failure_response(
+                flow="repo",
+                request_id=request_id,
+                code="NOT_FOUND",
+                message="repository_not_found",
+                retryable=False,
+                status_code=404,
+            )
         data = resp.json()
         languages = lang_resp.json() if lang_resp.status_code == 200 else {}
-        return {
-            "name": data["name"],
-            "description": data.get("description"),
-            "language": data.get("language"),
-            "stars": data.get("stargazers_count", 0),
-            "forks": data.get("forks_count", 0),
-            "html_url": data.get("html_url"),
-            "languages_breakdown": languages,
-        }
-    except Exception:
-        return {"error": "Failed to fetch repository"}
+        return success(
+            flow="repo",
+            request_id=request_id,
+            source="github",
+            data={
+                "name": data["name"],
+                "description": data.get("description"),
+                "language": data.get("language"),
+                "stars": data.get("stargazers_count", 0),
+                "forks": data.get("forks_count", 0),
+                "html_url": data.get("html_url"),
+                "languages_breakdown": languages,
+            },
+        )
+    except Exception as exc:  # noqa: BLE001
+        return failure_response(
+            flow="repo",
+            request_id=request_id,
+            code="UPSTREAM_ERROR",
+            message="repo_detail_fetch_failed",
+            retryable=True,
+            status_code=502,
+            details={"error_type": exc.__class__.__name__},
+        )
 
 
 @router.post("/repos/{owner}/{repo}/analyze")
-async def analyze_repo(owner: str, repo: str):
+async def analyze_repo(request: Request, owner: str, repo: str):
     """Return LLM repository analysis with graceful fallback to mock."""
-    result = await analyze_repository(owner=owner, repo=repo)
-    return result.analysis.model_dump()
+    request_id = request_id_from_request(request)
+    try:
+        result = await analyze_repository(owner=owner, repo=repo)
+        return success(
+            flow="repo",
+            request_id=request_id,
+            source=result.source,
+            reason=result.reason,
+            data=result.analysis.model_dump(),
+        )
+    except Exception as exc:  # noqa: BLE001
+        return failure_response(
+            flow="repo",
+            request_id=request_id,
+            code="UPSTREAM_ERROR",
+            message="repo_analysis_failed",
+            retryable=True,
+            status_code=502,
+            details={"error_type": exc.__class__.__name__},
+        )
 
 
 @router.get("/quest-stats")
-async def get_quest_stats():
+async def get_quest_stats(request: Request):
     """Aggregate stats for the Quest Log overview."""
-    data = await get_repos()
-    repos = data.get("repos", [])
+    request_id = request_id_from_request(request)
+    wrapped = await get_repos(request)
+    if not isinstance(wrapped, dict) or not wrapped.get("ok"):
+        return failure_response(
+            flow="repo",
+            request_id=request_id,
+            code="UPSTREAM_ERROR",
+            message="repos_fetch_failed",
+            retryable=True,
+            status_code=502,
+        )
+    repos = wrapped.get("data", {}).get("repos", [])
     total_stars = sum(r.get("stars", 0) for r in repos)
     total_xp = sum(r.get("xp", 0) for r in repos)
     languages = list({r.get("language", "Unknown") for r in repos})
-    return {
-        "total_repos": len(repos),
-        "total_stars": total_stars,
-        "total_xp": total_xp,
-        "languages": languages,
-        "active_quests": sum(1 for r in repos if r.get("status") == "Active"),
-        "completed_quests": sum(1 for r in repos if r.get("status") == "Completed"),
-    }
+    return success(
+        flow="repo",
+        request_id=request_id,
+        source="aggregate",
+        data={
+            "total_repos": len(repos),
+            "total_stars": total_stars,
+            "total_xp": total_xp,
+            "languages": languages,
+            "active_quests": sum(1 for r in repos if r.get("status") == "Active"),
+            "completed_quests": sum(1 for r in repos if r.get("status") == "Completed"),
+        },
+    )
 
 
 @router.get("/profile")
-async def get_github_profile():
+async def get_github_profile(request: Request):
     """Get GitHub user profile stats."""
+    request_id = request_id_from_request(request)
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.get(
@@ -170,18 +248,37 @@ async def get_github_profile():
                 headers={"Accept": "application/vnd.github.v3+json"},
             )
         if resp.status_code != 200:
-            return {"error": "Profile not found"}
+            return failure_response(
+                flow="repo",
+                request_id=request_id,
+                code="NOT_FOUND",
+                message="profile_not_found",
+                retryable=False,
+                status_code=404,
+            )
         data = resp.json()
-        return {
-            "login": data["login"],
-            "name": data.get("name"),
-            "avatar_url": data.get("avatar_url"),
-            "bio": data.get("bio"),
-            "public_repos": data.get("public_repos", 0),
-            "followers": data.get("followers", 0),
-            "following": data.get("following", 0),
-            "html_url": data.get("html_url"),
-        }
-    except Exception:
-        return {"error": "Failed to fetch profile"}
-
+        return success(
+            flow="repo",
+            request_id=request_id,
+            source="github",
+            data={
+                "login": data["login"],
+                "name": data.get("name"),
+                "avatar_url": data.get("avatar_url"),
+                "bio": data.get("bio"),
+                "public_repos": data.get("public_repos", 0),
+                "followers": data.get("followers", 0),
+                "following": data.get("following", 0),
+                "html_url": data.get("html_url"),
+            },
+        )
+    except Exception as exc:  # noqa: BLE001
+        return failure_response(
+            flow="repo",
+            request_id=request_id,
+            code="UPSTREAM_ERROR",
+            message="profile_fetch_failed",
+            retryable=True,
+            status_code=502,
+            details={"error_type": exc.__class__.__name__},
+        )

@@ -3,13 +3,18 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
 import random
 import time
+from typing import TYPE_CHECKING, Any
 
 import openai
 from openai import AsyncOpenAI
+
+if TYPE_CHECKING:
+    from app.services.llm_tools_oracle import OracleToolRuntime
 
 logger = logging.getLogger(__name__)
 
@@ -95,6 +100,7 @@ class LLMClient:
         )
         self.max_input_chars = max(1000, _env_int("LLM_MAX_INPUT_CHARS", 24000))
         self.max_total_chars = max(1000, _env_int("LLM_MAX_TOTAL_CHARS", 32000))
+        self.oracle_tool_round_limit = max(1, _env_int("OPENAI_ORACLE_TOOL_ROUND_LIMIT", 3))
 
         self._client = (
             AsyncOpenAI(
@@ -184,7 +190,75 @@ class LLMClient:
             provider_request_id,
         )
 
-    async def generate_oracle_text(self, *, instructions: str, input_text: str) -> str:
+    @staticmethod
+    def _extract_function_calls(response: Any) -> list[Any]:
+        output_items = getattr(response, "output", None) or []
+        return [item for item in output_items if getattr(item, "type", "") == "function_call"]
+
+    async def _continue_with_tool_outputs(
+        self,
+        *,
+        provider_client: AsyncOpenAI,
+        response: Any,
+        instructions: str,
+        tool_runtime: OracleToolRuntime,
+    ) -> Any:
+        rounds = 0
+        current = response
+        while rounds < self.oracle_tool_round_limit:
+            function_calls = self._extract_function_calls(current)
+            if not function_calls:
+                return current
+
+            rounds += 1
+            tool_outputs: list[dict[str, str]] = []
+            for function_call in function_calls:
+                name = str(getattr(function_call, "name", "") or "")
+                call_id = str(getattr(function_call, "call_id", "") or "")
+                arguments = str(getattr(function_call, "arguments", "") or "")
+                if not name or not call_id:
+                    continue
+                result = tool_runtime.execute(name=name, arguments_json=arguments)
+                tool_outputs.append(
+                    {
+                        "type": "function_call_output",
+                        "call_id": call_id,
+                        "output": json.dumps(result, ensure_ascii=True),
+                    }
+                )
+
+            if not tool_outputs:
+                break
+
+            previous_response_id = getattr(current, "id", None)
+            if not previous_response_id:
+                raise LLMResponseFormatError("Missing previous_response_id for tool continuation")
+
+            current = await provider_client.responses.create(
+                model=self.model_oracle,
+                instructions=instructions,
+                previous_response_id=previous_response_id,
+                input=tool_outputs,
+                temperature=self.temperature_oracle,
+                top_p=self.top_p_oracle,
+                max_output_tokens=self.max_tokens_oracle,
+            )
+            logger.info(
+                "oracle_llm_tools_round round=%s tool_calls=%s request_id=%s",
+                rounds,
+                len(tool_outputs),
+                getattr(current, "_request_id", None),
+            )
+
+        raise LLMResponseFormatError("Tool-calling rounds exhausted before final text output")
+
+    async def generate_oracle_text(
+        self,
+        *,
+        instructions: str,
+        input_text: str,
+        tool_runtime: OracleToolRuntime | None = None,
+    ) -> str:
         """Generate Oracle response text from configured model."""
         if not self._client:
             raise LLMConfigurationError("OPENAI_API_KEY is missing")
@@ -196,14 +270,29 @@ class LLMClient:
 
         for attempt in range(1, max_attempts + 1):
             try:
+                create_kwargs: dict[str, Any] = {
+                    "model": self.model_oracle,
+                    "instructions": instructions,
+                    "input": input_text,
+                    "temperature": self.temperature_oracle,
+                    "top_p": self.top_p_oracle,
+                    "max_output_tokens": self.max_tokens_oracle,
+                }
+                if tool_runtime is not None:
+                    create_kwargs["tools"] = tool_runtime.tools_for_openai()
+                    create_kwargs["tool_choice"] = "auto"
+                    create_kwargs["parallel_tool_calls"] = False
+
                 response = await provider_client.responses.create(
-                    model=self.model_oracle,
-                    instructions=instructions,
-                    input=input_text,
-                    temperature=self.temperature_oracle,
-                    top_p=self.top_p_oracle,
-                    max_output_tokens=self.max_tokens_oracle,
+                    **create_kwargs,
                 )
+                if tool_runtime is not None:
+                    response = await self._continue_with_tool_outputs(
+                        provider_client=provider_client,
+                        response=response,
+                        instructions=instructions,
+                        tool_runtime=tool_runtime,
+                    )
                 request_id = getattr(response, "_request_id", None)
                 logger.info(
                     "oracle_llm_success model=%s latency_ms=%s request_id=%s",

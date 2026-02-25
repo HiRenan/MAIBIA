@@ -12,6 +12,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app.database import create_db_and_tables, engine
 from app.routers import blog, cv, gamification, github, oracle
+from app.services.log_safety import install_redaction_filter
 from app.seed import ensure_achievements, seed_initial_data
 
 
@@ -26,6 +27,7 @@ def _configure_logging() -> None:
         )
     else:
         root_logger.setLevel(level)
+    install_redaction_filter()
 
 
 _configure_logging()

@@ -1,11 +1,13 @@
 """CV upload and analysis endpoints with SQLite persistence."""
 
+from __future__ import annotations
+
 import io
 import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse
 from sqlmodel import Session, select
 
@@ -18,6 +20,7 @@ from app.services.cv_export_service import (
 )
 from app.services.cv_service import analyze_uploaded_cv
 from app.services.gamification_engine import award_xp
+from app.services.response_envelope import failure_response, request_id_from_request, success
 
 router = APIRouter(prefix="/cv", tags=["cv"])
 
@@ -42,63 +45,142 @@ def _format_analysis(record: CVAnalysis) -> dict:
 
 @router.post("/upload")
 async def upload_cv(
+    request: Request,
     file: UploadFile = File(...),
     session: Session = Depends(get_session),
 ):
     """Accept file upload, run structured analysis, persist to DB."""
+    request_id = request_id_from_request(request)
     filename = file.filename or "unknown.pdf"
     extension = Path(filename).suffix.lower()
     if extension not in ALLOWED_CV_EXTENSIONS:
-        raise HTTPException(status_code=400, detail="unsupported_file_type")
+        return failure_response(
+            flow="cv",
+            request_id=request_id,
+            code="VALIDATION_ERROR",
+            message="unsupported_file_type",
+            retryable=False,
+            status_code=400,
+        )
 
     contents = await file.read()
     file_size = len(contents)
     if file_size <= 0:
-        raise HTTPException(status_code=400, detail="empty_file")
+        return failure_response(
+            flow="cv",
+            request_id=request_id,
+            code="VALIDATION_ERROR",
+            message="empty_file",
+            retryable=False,
+            status_code=400,
+        )
     if file_size > MAX_UPLOAD_BYTES:
-        raise HTTPException(status_code=400, detail="file_too_large")
+        return failure_response(
+            flow="cv",
+            request_id=request_id,
+            code="VALIDATION_ERROR",
+            message="file_too_large",
+            retryable=False,
+            status_code=400,
+        )
 
-    service_result = await analyze_uploaded_cv(filename=filename, file_size=file_size, contents=contents)
-    result = service_result.analysis.model_dump()
+    try:
+        service_result = await analyze_uploaded_cv(filename=filename, file_size=file_size, contents=contents)
+        result = service_result.analysis.model_dump()
 
-    record = CVAnalysis(
-        filename=filename,
-        file_size=file_size,
-        score=result["score"],
-        strengths=json.dumps(result["strengths"]),
-        weaknesses=json.dumps(result["weaknesses"]),
-        tips=json.dumps(result["tips"]),
-        sections=json.dumps(result["sections"]),
-        created_at=datetime.now(timezone.utc).isoformat(),
-    )
-    session.add(record)
-    session.commit()
-    session.refresh(record)
+        record = CVAnalysis(
+            filename=filename,
+            file_size=file_size,
+            score=result["score"],
+            strengths=json.dumps(result["strengths"]),
+            weaknesses=json.dumps(result["weaknesses"]),
+            tips=json.dumps(result["tips"]),
+            sections=json.dumps(result["sections"]),
+            created_at=datetime.now(timezone.utc).isoformat(),
+        )
+        session.add(record)
+        session.commit()
+        session.refresh(record)
 
-    # Award XP for CV analysis
-    gamification = award_xp(session, "cv_upload", f"Analyzed CV: {filename}", 100)
+        # Award XP for CV analysis
+        gamification = award_xp(session, "cv_upload", f"Analyzed CV: {filename}", 100)
 
-    result_data = _format_analysis(record)
-    result_data["gamification"] = gamification
-    return result_data
+        result_data = _format_analysis(record)
+        result_data["gamification"] = gamification
+        return success(
+            flow="cv",
+            request_id=request_id,
+            source=service_result.source,
+            reason=service_result.reason,
+            data=result_data,
+        )
+    except Exception as exc:  # noqa: BLE001
+        return failure_response(
+            flow="cv",
+            request_id=request_id,
+            code="DB_ERROR",
+            message="cv_upload_failed",
+            retryable=True,
+            status_code=500,
+            details={"error_type": exc.__class__.__name__},
+        )
 
 
 @router.get("/analysis")
-async def get_analysis(session: Session = Depends(get_session)):
+async def get_analysis(request: Request, session: Session = Depends(get_session)):
     """Return the most recent CV analysis."""
-    statement = select(CVAnalysis).order_by(CVAnalysis.id.desc()).limit(1)  # type: ignore[union-attr]
-    record = session.exec(statement).first()
-    if record is None:
-        return {"status": "no_analysis", "message": "Upload a CV first"}
-    return _format_analysis(record)
+    request_id = request_id_from_request(request)
+    try:
+        statement = select(CVAnalysis).order_by(CVAnalysis.id.desc()).limit(1)  # type: ignore[union-attr]
+        record = session.exec(statement).first()
+        if record is None:
+            return success(
+                flow="cv",
+                request_id=request_id,
+                source="db",
+                data={"status": "no_analysis", "message": "Upload a CV first"},
+            )
+        return success(
+            flow="cv",
+            request_id=request_id,
+            source="db",
+            data=_format_analysis(record),
+        )
+    except Exception as exc:  # noqa: BLE001
+        return failure_response(
+            flow="cv",
+            request_id=request_id,
+            code="DB_ERROR",
+            message="cv_analysis_fetch_failed",
+            retryable=True,
+            status_code=500,
+            details={"error_type": exc.__class__.__name__},
+        )
 
 
 @router.get("/analyses")
-async def get_analyses(session: Session = Depends(get_session)):
+async def get_analyses(request: Request, session: Session = Depends(get_session)):
     """Return all CV analyses, newest first."""
-    statement = select(CVAnalysis).order_by(CVAnalysis.id.desc())  # type: ignore[union-attr]
-    records = session.exec(statement).all()
-    return {"analyses": [_format_analysis(r) for r in records]}
+    request_id = request_id_from_request(request)
+    try:
+        statement = select(CVAnalysis).order_by(CVAnalysis.id.desc())  # type: ignore[union-attr]
+        records = session.exec(statement).all()
+        return success(
+            flow="cv",
+            request_id=request_id,
+            source="db",
+            data={"analyses": [_format_analysis(r) for r in records]},
+        )
+    except Exception as exc:  # noqa: BLE001
+        return failure_response(
+            flow="cv",
+            request_id=request_id,
+            code="DB_ERROR",
+            message="cv_analyses_fetch_failed",
+            retryable=True,
+            status_code=500,
+            details={"error_type": exc.__class__.__name__},
+        )
 
 
 @router.get("/download-rpg")
