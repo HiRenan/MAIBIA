@@ -7,3 +7,5 @@ openai
 pypdf
 python-docx
 reportlab
+itsdangerous
+pytest
