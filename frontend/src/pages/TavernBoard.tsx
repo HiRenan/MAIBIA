@@ -1,7 +1,6 @@
 import { useRef, useState, useMemo, useCallback } from 'react'
 import { motion, useInView, AnimatePresence } from 'motion/react'
 import {
-  Plus,
   Pin,
   Edit3,
   Trash2,
@@ -20,7 +19,6 @@ import AnimatedCounter from '../components/ui/AnimatedCounter'
 import Modal from '../components/ui/Modal'
 import { api, type BlogPostData, type BlogPostCreate } from '../services/api'
 import { useAPI } from '../hooks/useAPI'
-import { useGamification } from '../contexts/GamificationContext'
 import { SOCIAL_LINKS, type SocialLinkName } from '../config/socialLinks'
 
 // ─── Fallback Data ──────────────────────────────────────────────────────
@@ -435,7 +433,7 @@ function SocialLinksPanel() {
       <p className="mb-4 font-heading text-xs tracking-wider text-text-muted uppercase">
         Social Links
       </p>
-      <div className="space-y-2">
+      <div className="relative z-20 space-y-2">
         {SOCIAL_LINKS.map((link) => (
           <a
             key={link.name}
@@ -443,7 +441,8 @@ function SocialLinksPanel() {
             aria-label={link.ariaLabel}
             target="_blank"
             rel="noopener noreferrer"
-            className="group flex items-center gap-3 rounded-lg border border-border-subtle/30 bg-bg-card/20 px-4 py-3 transition-all duration-200 hover:border-border-subtle/50 hover:bg-bg-card/40"
+            className="relative z-30 pointer-events-auto group flex items-center gap-3 rounded-lg border border-border-subtle/30 bg-bg-card/20 px-4 py-3 transition-all duration-200 hover:border-border-subtle/50 hover:bg-bg-card/40"
+            onClick={(e) => e.stopPropagation()}
           >
             <div
               className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors duration-200"
@@ -773,7 +772,6 @@ function DeleteConfirmModal({
 // ─── Main TavernBoard Page ──────────────────────────────────────────────
 
 export default function TavernBoard() {
-  const { showXPGain } = useGamification()
   const { data, loading } = useAPI(
     () => api.getBlogPosts(),
     { posts: FALLBACK_POSTS, total: FALLBACK_POSTS.length }
@@ -783,7 +781,6 @@ export default function TavernBoard() {
   const [deletedIds, setDeletedIds] = useState<number[]>([])
   const [edits, setEdits] = useState<Record<number, BlogPostData>>({})
   const [activeCategory, setActiveCategory] = useState<CategoryKey>('all')
-  const [createModalOpen, setCreateModalOpen] = useState(false)
   const [editingPost, setEditingPost] = useState<BlogPostData | null>(null)
   const [deletingPost, setDeletingPost] = useState<BlogPostData | null>(null)
 
@@ -807,26 +804,6 @@ export default function TavernBoard() {
   }, [posts, activeCategory])
 
   const pinnedPost = useMemo(() => posts.find((p) => p.pinned), [posts])
-
-  const handleCreate = useCallback(async (formData: BlogPostCreate) => {
-    const result = await api.createBlogPost(formData)
-    const newPost: BlogPostData = result ?? {
-      id: Date.now(),
-      title: formData.title,
-      content: formData.content,
-      category: (formData.category || 'update') as BlogPostData['category'],
-      tags: formData.tags || '',
-      color: formData.color || '#8b5cf6',
-      pinned: formData.pinned || false,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }
-    setAdditions((prev) => [newPost, ...prev])
-    setCreateModalOpen(false)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const gamification = (result as any)?.gamification
-    if (gamification) showXPGain(gamification)
-  }, [showXPGain])
 
   const handleEdit = useCallback(async (formData: BlogPostCreate) => {
     if (!editingPost) return
@@ -864,16 +841,9 @@ export default function TavernBoard() {
       {/* Stats Bar */}
       <TavernStatsBar posts={posts} />
 
-      {/* Category Filters + New Post button */}
+      {/* Category Filters */}
       <motion.div variants={itemVariants} className="mb-6 flex flex-wrap items-center gap-3">
         <CategoryFilters active={activeCategory} onChange={setActiveCategory} />
-        <button
-          onClick={() => setCreateModalOpen(true)}
-          className="ml-auto flex items-center gap-2 rounded-lg border border-accent-purple/40 bg-accent-purple/10 px-4 py-2 text-xs font-medium text-accent-purple transition-all hover:bg-accent-purple/20"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          New Post
-        </button>
       </motion.div>
 
       {/* Main Grid */}
@@ -906,18 +876,12 @@ export default function TavernBoard() {
             >
               <FileText className="mx-auto mb-3 h-10 w-10 text-text-muted/30" />
               <p className="text-sm text-text-muted">No posts in this category yet.</p>
-              <button
-                onClick={() => setCreateModalOpen(true)}
-                className="mt-3 text-xs text-accent-purple hover:text-accent-purple/80"
-              >
-                Write the first one
-              </button>
             </motion.div>
           )}
         </div>
 
         {/* Sidebar */}
-        <div className="space-y-8 md:col-span-1 lg:col-span-2">
+        <div className="relative z-20 space-y-8 md:col-span-1 lg:col-span-2">
           <SocialLinksPanel />
           <TagCloud posts={posts} />
           <PinnedHighlight post={pinnedPost} />
@@ -925,15 +889,6 @@ export default function TavernBoard() {
       </div>
 
       {/* Modals */}
-      {createModalOpen && (
-        <PostFormModal
-          key="create-modal"
-          open={createModalOpen}
-          onClose={() => setCreateModalOpen(false)}
-          onSave={handleCreate}
-        />
-      )}
-
       {editingPost && (
         <PostFormModal
           key={`edit-${editingPost.id}`}
