@@ -1,4 +1,6 @@
-"""GitHub API integration — real data from github.com/HiRenan."""
+"""GitHub API integration - real data from github.com/HiRenan."""
+
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter
 import httpx
@@ -8,6 +10,7 @@ from app.services.repo_analysis_service import analyze_repository
 router = APIRouter(prefix="/github", tags=["github"])
 GITHUB_USER = "HiRenan"
 GITHUB_API = "https://api.github.com"
+ACTIVE_REPO_WINDOW_DAYS = 180
 
 # Fallback repos matching QuestLog.tsx QUESTS when API is unavailable
 FALLBACK_REPOS = [
@@ -39,6 +42,27 @@ def _calculate_xp(repo: dict) -> int:
     return min(base, 500)
 
 
+def _parse_repo_datetime(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def _calculate_status(repo: dict) -> str:
+    if repo.get("archived"):
+        return "Completed"
+
+    last_activity = _parse_repo_datetime(repo.get("pushed_at") or repo.get("updated_at"))
+    if not last_activity:
+        return "Active"
+
+    cutoff = datetime.now(timezone.utc) - timedelta(days=ACTIVE_REPO_WINDOW_DAYS)
+    return "Active" if last_activity >= cutoff else "Completed"
+
+
 @router.get("/repos")
 async def get_repos():
     """Fetch real repos from GitHub API, enriched with RPG metadata."""
@@ -63,7 +87,7 @@ async def get_repos():
                 "language": repo.get("language") or "Unknown",
                 "stars": repo.get("stargazers_count", 0),
                 "forks": repo.get("forks_count", 0),
-                "status": "Completed" if repo.get("archived") else "Active",
+                "status": _calculate_status(repo),
                 "rarity": _calculate_rarity(repo.get("stargazers_count", 0)),
                 "xp": _calculate_xp(repo),
                 "html_url": repo.get("html_url", ""),
@@ -160,3 +184,4 @@ async def get_github_profile():
         }
     except Exception:
         return {"error": "Failed to fetch profile"}
+

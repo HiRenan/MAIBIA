@@ -79,6 +79,9 @@ const LANG_COLORS: Record<string, string> = {
 
 const SORT_OPTIONS: SortOption[] = ['Stars', 'XP', 'Name', 'Updated']
 const RARITIES: Rarity[] = ['Common', 'Rare', 'Epic', 'Legendary']
+const ACTIVE_REPO_WINDOW_DAYS = 180
+const ACTIVE_STATUS_TOKENS = new Set(['active', 'ativa', 'in_progress', 'in-progress', 'ongoing', 'wip', 'open'])
+const COMPLETED_STATUS_TOKENS = new Set(['completed', 'concluded', 'concluida', 'done', 'closed', 'archived'])
 
 function getStatusLabel(status: 'all' | Status, t: Translate) {
   if (status === 'all') return t('questLog.status.all')
@@ -105,6 +108,21 @@ function getSortLabel(sort: SortOption, t: Translate) {
   return t(sortToKey[sort])
 }
 
+function isRecentlyActive(updatedAt?: string): boolean {
+  if (!updatedAt) return true
+  const parsed = Date.parse(updatedAt)
+  if (Number.isNaN(parsed)) return true
+  const cutoff = Date.now() - ACTIVE_REPO_WINDOW_DAYS * 24 * 60 * 60 * 1000
+  return parsed >= cutoff
+}
+
+function normalizeStatus(rawStatus: string | null | undefined, updatedAt?: string): Status {
+  const normalized = (rawStatus ?? '').trim().toLowerCase()
+  if (ACTIVE_STATUS_TOKENS.has(normalized)) return 'Active'
+  if (COMPLETED_STATUS_TOKENS.has(normalized)) return 'Completed'
+  return isRecentlyActive(updatedAt) ? 'Active' : 'Completed'
+}
+
 /* ═══════════════════════════════════════════
    FALLBACK DATA
    ═══════════════════════════════════════════ */
@@ -125,7 +143,7 @@ const FALLBACK_REPOS: ReposResponse = {
    ═══════════════════════════════════════════ */
 function repoToQuest(repo: RepoData): Quest {
   const rarity = (RARITIES.includes(repo.rarity as Rarity) ? repo.rarity : 'Common') as Rarity
-  const status: Status = repo.status === 'Active' ? 'Active' : 'Completed'
+  const status: Status = normalizeStatus(repo.status, repo.updated_at)
   return {
     name: repo.name,
     description: repo.description || '',
