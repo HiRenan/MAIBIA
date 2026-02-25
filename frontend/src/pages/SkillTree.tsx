@@ -1189,7 +1189,6 @@ export default function SkillTree() {
       {activeBranch && (
         <motion.div variants={item} className="mb-3 text-center text-[11px] tracking-wide text-text-muted">
           {t('skillTree.filteredBy', {
-            defaultValue: 'Filtering by: {{branch}}',
             branch: getBranchLabel(
               activeBranch,
               branches.find((branch) => branch.id === activeBranch)?.name ?? activeBranch,

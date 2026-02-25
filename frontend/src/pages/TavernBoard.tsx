@@ -432,7 +432,7 @@ function SocialLinksPanel() {
           <a
             key={link.name}
             href={link.url}
-            aria-label={link.ariaLabel}
+            aria-label={t(link.ariaLabelKey)}
             target="_blank"
             rel="noopener noreferrer"
             className="relative z-30 pointer-events-auto group flex items-center gap-3 rounded-lg border border-border-subtle/30 bg-bg-card/20 px-4 py-3 transition-all duration-200 hover:border-border-subtle/50 hover:bg-bg-card/40"

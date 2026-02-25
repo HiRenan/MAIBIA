@@ -695,7 +695,7 @@ export default function GuildHall() {
               type="file"
               accept=".pdf,.doc,.docx"
               className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
-              aria-label="Upload CV file"
+              aria-label={t('guild.upload.ariaLabel')}
               onDragOver={(e) => { e.preventDefault(); setIsDragOver(true) }}
               onDragLeave={() => setIsDragOver(false)}
               onDrop={handleDrop}
