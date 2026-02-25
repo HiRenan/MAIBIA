@@ -280,15 +280,56 @@ const FALLBACK_SKILLS: SkillsResponse = {
 }
 
 /* ─── SVG Layout Config ─── */
-const CENTER_Y = 290
-const BRANCH_ANGLES = [-90, 30, 150]
-const NODE_SPACING = 72
+const BRANCH_ANGLES = [-90, 30, 150] as const
+const MIN_NODE_SPACING = 44
+const MAX_NODE_SPACING = 72
 
-function getNodePositions(branchIndex: number) {
-  const angle = (BRANCH_ANGLES[branchIndex] * Math.PI) / 180
-  return Array.from({ length: 5 }, (_, i) => ({
-    x: Math.cos(angle) * NODE_SPACING * (i + 1),
-    y: CENTER_Y + Math.sin(angle) * NODE_SPACING * (i + 1),
+interface TreeLayoutConfig {
+  centerY: number
+  nodeSpacing: number
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max)
+}
+
+function getTextAnchorFromVector(vectorX: number): 'start' | 'middle' | 'end' {
+  if (Math.abs(vectorX) < 0.3) return 'middle'
+  return vectorX > 0 ? 'start' : 'end'
+}
+
+function getPerpendicularLabelVector(branchIndex: number, vectorX: number, vectorY: number) {
+  const cw = { x: vectorY, y: -vectorX }
+  const ccw = { x: -vectorY, y: vectorX }
+
+  if (branchIndex === 0) return { x: 1, y: 0 }
+  return Math.sign(cw.x) === Math.sign(vectorX) ? cw : ccw
+}
+
+function computeTreeLayout(width: number, height: number, branches: Branch[]): TreeLayoutConfig {
+  const maxDepth = Math.max(1, ...branches.map((branch) => branch.skills.length))
+  const horizontalBudget = Math.max(width / 2 - 125, 120)
+  const verticalBudget = Math.max(height - 210, 200)
+
+  const spacingByWidth = horizontalBudget / (maxDepth * 0.9)
+  const spacingByHeight = verticalBudget / (maxDepth * 1.6)
+  const nodeSpacing = clamp(Math.min(spacingByWidth, spacingByHeight), MIN_NODE_SPACING, MAX_NODE_SPACING)
+
+  const topBound = nodeSpacing * maxDepth + 82
+  const bottomBound = height - (nodeSpacing * maxDepth * 0.62 + 86)
+  const centerY = clamp(height * 0.56, topBound, Math.max(topBound + 1, bottomBound))
+
+  return {
+    centerY,
+    nodeSpacing,
+  }
+}
+
+function getNodePositions(branchIndex: number, skillCount: number, layout: TreeLayoutConfig) {
+  const angle = ((BRANCH_ANGLES[branchIndex] ?? BRANCH_ANGLES[0]) * Math.PI) / 180
+  return Array.from({ length: skillCount }, (_, i) => ({
+    x: Math.cos(angle) * layout.nodeSpacing * (i + 1),
+    y: layout.centerY + Math.sin(angle) * layout.nodeSpacing * (i + 1),
   }))
 }
 
@@ -415,13 +456,23 @@ function BranchFilters({ branches, activeBranch, onFilter }: {
 }) {
   const { t } = useTranslation()
 
+  function handleFilterClick(nextBranch: string | null) {
+    onFilter(nextBranch)
+  }
+
   return (
-    <motion.div variants={item} className="mb-5 flex flex-wrap items-center justify-center gap-2">
+    <motion.div variants={item} className="relative z-10 mb-5 flex flex-wrap items-center justify-center gap-2">
       <button
-        onClick={() => onFilter(null)}
+        type="button"
+        aria-pressed={!activeBranch}
+        onClick={(event) => {
+          event.preventDefault()
+          event.stopPropagation()
+          handleFilterClick(null)
+        }}
         className={`rounded-full border px-3.5 py-1.5 font-heading text-[11px] tracking-wider transition-all ${
           !activeBranch
-            ? 'border-accent-gold/40 bg-accent-gold/10 text-accent-gold'
+            ? 'border-accent-gold/60 bg-accent-gold/18 text-accent-gold shadow-[0_0_12px_rgba(240,192,64,0.25)]'
             : 'border-border-subtle/30 text-text-muted hover:border-border-subtle/60 hover:text-text-secondary'
         }`}
       >
@@ -433,16 +484,23 @@ function BranchFilters({ branches, activeBranch, onFilter }: {
         return (
           <button
             key={b.id}
-            onClick={() => onFilter(isActive ? null : b.id)}
+            type="button"
+            aria-pressed={isActive}
+            onClick={(event) => {
+              event.preventDefault()
+              event.stopPropagation()
+              handleFilterClick(isActive ? null : b.id)
+            }}
             className={`flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 font-heading text-[11px] tracking-wider transition-all ${
               isActive
                 ? 'text-white'
                 : 'border-border-subtle/30 text-text-muted hover:border-border-subtle/60 hover:text-text-secondary'
             }`}
             style={isActive ? {
-              borderColor: `${b.color}50`,
-              backgroundColor: `${b.color}18`,
+              borderColor: `${b.color}70`,
+              backgroundColor: `${b.color}24`,
               color: b.color,
+              boxShadow: `0 0 14px ${b.color}30`,
             } : undefined}
           >
             <Icon className="h-3 w-3" />
@@ -500,15 +558,21 @@ function AnimatedLine({ x1, y1, x2, y2, color, unlocked, delay, highlighted }: {
 }
 
 /* ─── Tree Node ─── */
-function TreeNode({ x, y, skill, color, delay, onClick, isSelected, isHovered, onHover, branchId }: {
+function TreeNode({ x, y, skill, color, delay, onClick, isSelected, isHovered, onHover, branchId, labelVectorX, labelVectorY }: {
   x: number; y: number; skill: SkillData; color: string
   delay: number; onClick: () => void; isSelected: boolean; isHovered: boolean
   onHover: (id: string | null) => void; branchId: string
+  labelVectorX: number; labelVectorY: number
 }) {
   const { t } = useTranslation()
   const radius = skill.unlocked ? 20 : 15
   const SkillIcon = SKILL_ICONS[skill.id] || IconFallback
   const tier = getSkillTier(skill.level, t)
+  const textAnchor = getTextAnchorFromVector(labelVectorX)
+
+  const nameDistance = radius + 13
+  const nameX = x + labelVectorX * nameDistance
+  const nameY = y + labelVectorY * nameDistance
 
   // Progress arc
   const arcRadius = radius + 5
@@ -590,9 +654,10 @@ function TreeNode({ x, y, skill, color, delay, onClick, isSelected, isHovered, o
 
       {/* Label */}
       <text
-        x={x}
-        y={y + radius + 16}
-        textAnchor="middle"
+        x={nameX}
+        y={nameY}
+        textAnchor={textAnchor}
+        dominantBaseline="middle"
         fontSize="9.5"
         fontFamily="Cinzel, serif"
         fill={skill.unlocked ? '#e2e8f0' : '#64748b'}
@@ -600,21 +665,6 @@ function TreeNode({ x, y, skill, color, delay, onClick, isSelected, isHovered, o
       >
         {skill.name}
       </text>
-
-      {/* Tier label below name */}
-      {skill.unlocked && (
-        <text
-          x={x}
-          y={y + radius + 27}
-          textAnchor="middle"
-          fontSize="7.5"
-          fontFamily="Raleway, sans-serif"
-          fill={tier.color}
-          opacity={0.7}
-        >
-          {tier.name}
-        </text>
-      )}
 
       {/* Hover tooltip */}
       {isHovered && skill.unlocked && (
@@ -643,7 +693,7 @@ function TreeNode({ x, y, skill, color, delay, onClick, isSelected, isHovered, o
 }
 
 /* ─── Center Node ─── */
-function CenterNode({ cx, powerScore }: { cx: number; powerScore: number }) {
+function CenterNode({ cx, centerY, powerScore }: { cx: number; centerY: number; powerScore: number }) {
   const { t } = useTranslation()
   const centerR = 32
   const arcR = centerR + 5
@@ -658,7 +708,7 @@ function CenterNode({ cx, powerScore }: { cx: number; powerScore: number }) {
     >
       {/* Outermost glow */}
       <motion.circle
-        cx={cx} cy={CENTER_Y} r={centerR + 16}
+        cx={cx} cy={centerY} r={centerR + 16}
         fill="none"
         stroke="#f0c040"
         strokeWidth={0.5}
@@ -672,7 +722,7 @@ function CenterNode({ cx, powerScore }: { cx: number; powerScore: number }) {
 
       {/* Power score arc */}
       <motion.circle
-        cx={cx} cy={CENTER_Y} r={arcR}
+        cx={cx} cy={centerY} r={arcR}
         fill="none"
         stroke="#f0c040"
         strokeWidth={2.5}
@@ -687,7 +737,7 @@ function CenterNode({ cx, powerScore }: { cx: number; powerScore: number }) {
 
       {/* Main circle */}
       <circle
-        cx={cx} cy={CENTER_Y} r={centerR}
+        cx={cx} cy={centerY} r={centerR}
         fill="rgba(240, 192, 64, 0.08)"
         stroke="#f0c040"
         strokeWidth={2}
@@ -696,24 +746,24 @@ function CenterNode({ cx, powerScore }: { cx: number; powerScore: number }) {
 
       {/* Inner ring */}
       <circle
-        cx={cx} cy={CENTER_Y} r={centerR - 6}
+        cx={cx} cy={centerY} r={centerR - 6}
         fill="none"
         stroke="rgba(240, 192, 64, 0.15)"
         strokeWidth={0.5}
       />
 
       {/* Power score */}
-      <text x={cx} y={CENTER_Y - 6} textAnchor="middle" fontSize="14" fontWeight="bold" fill="#f0c040" fontFamily="Cinzel, serif">
+      <text x={cx} y={centerY - 6} textAnchor="middle" fontSize="14" fontWeight="bold" fill="#f0c040" fontFamily="Cinzel, serif">
         {powerScore}
       </text>
 
       {/* Label */}
-      <text x={cx} y={CENTER_Y + 6} textAnchor="middle" fontSize="6.5" fill="rgba(240, 192, 64, 0.6)" fontFamily="Raleway, sans-serif" letterSpacing="1.5">
+      <text x={cx} y={centerY + 6} textAnchor="middle" fontSize="6.5" fill="rgba(240, 192, 64, 0.6)" fontFamily="Raleway, sans-serif" letterSpacing="1.5">
         {t('skillTree.center.power')}
       </text>
 
       {/* Class title below */}
-      <text x={cx} y={CENTER_Y + centerR + 16} textAnchor="middle" fontSize="10" fill="#f0c040" fontFamily="Cinzel, serif" letterSpacing="1">
+      <text x={cx} y={centerY + centerR + 16} textAnchor="middle" fontSize="10" fill="#f0c040" fontFamily="Cinzel, serif" letterSpacing="1">
         {t('skillTree.center.classTitle')}
       </text>
     </motion.g>
@@ -1028,7 +1078,7 @@ export default function SkillTree() {
   const [activeBranch, setActiveBranch] = useState<string | null>(null)
   const [hoveredNode, setHoveredNode] = useState<string | null>(null)
   const svgRef = useRef<SVGSVGElement>(null)
-  const [svgSize, setSvgSize] = useState({ width: 800, height: 580 })
+  const [svgSize, setSvgSize] = useState({ width: 800, height: 620 })
 
   const branches: Branch[] = useMemo(
     () => skillsData.branches.map((b) => ({
@@ -1045,13 +1095,29 @@ export default function SkillTree() {
     function resize() {
       if (svgRef.current?.parentElement) {
         const w = svgRef.current.parentElement.clientWidth
-        setSvgSize({ width: Math.max(w, 600), height: 580 })
+        const h = Math.max(560, Math.min(700, Math.round(w * 0.72)))
+        setSvgSize({ width: Math.max(w, 600), height: h })
       }
     }
     resize()
     window.addEventListener('resize', resize)
     return () => window.removeEventListener('resize', resize)
   }, [])
+
+  const visibleBranches = useMemo(
+    () => (activeBranch ? branches.filter((branch) => branch.id === activeBranch) : branches),
+    [activeBranch, branches],
+  )
+
+  const layout = useMemo(
+    () => computeTreeLayout(svgSize.width, svgSize.height, branches),
+    [branches, svgSize.height, svgSize.width],
+  )
+
+  const gridRadii = useMemo(
+    () => [1.4, 2.6, 3.8, 5].map((factor) => Math.round(layout.nodeSpacing * factor)),
+    [layout.nodeSpacing],
+  )
 
   const cx = svgSize.width / 2
 
@@ -1065,9 +1131,45 @@ export default function SkillTree() {
     }
   }
 
+  function handleBranchFilter(nextBranch: string | null) {
+    setActiveBranch(nextBranch)
+    if (nextBranch && selectedSkill && selectedSkill.branchId !== nextBranch) {
+      setSelectedSkill(null)
+    }
+  }
+
   const hoveredBranchId = hoveredNode?.split(':')[0] ?? null
   const selectedBranch = selectedSkill ? branches.find((b) => b.id === selectedSkill.branchId) : null
   const selectedSkillData = selectedBranch?.skills.find((s) => s.id === selectedSkill?.skillId)
+  const branchRenderData = useMemo(
+    () => visibleBranches.map((branch) => {
+      const branchIndex = branches.findIndex((item) => item.id === branch.id)
+      const angle = ((BRANCH_ANGLES[branchIndex] ?? BRANCH_ANGLES[0]) * Math.PI) / 180
+      const vectorX = Math.cos(angle)
+      const vectorY = Math.sin(angle)
+      const labelVector = getPerpendicularLabelVector(branchIndex, vectorX, vectorY)
+      const positions = getNodePositions(branchIndex, branch.skills.length, layout).map((p) => ({
+        x: p.x + cx,
+        y: p.y,
+      }))
+      const last = positions[positions.length - 1] ?? { x: cx, y: layout.centerY }
+      const branchLabelX = last.x + vectorX * 12 + labelVector.x * 60
+      const branchLabelY = last.y + vectorY * 12 + labelVector.y * 60
+
+      return {
+        branch,
+        positions,
+        vectorX,
+        vectorY,
+        labelVectorX: labelVector.x,
+        labelVectorY: labelVector.y,
+        branchLabelX,
+        branchLabelY,
+        textAnchor: getTextAnchorFromVector(labelVector.x),
+      }
+    }),
+    [branches, cx, layout, visibleBranches],
+  )
 
   return (
     <motion.div variants={container} initial="hidden" animate="show">
@@ -1082,7 +1184,20 @@ export default function SkillTree() {
       <StatsBar branches={branches} />
 
       {/* Branch filters */}
-      <BranchFilters branches={branches} activeBranch={activeBranch} onFilter={setActiveBranch} />
+      <BranchFilters branches={branches} activeBranch={activeBranch} onFilter={handleBranchFilter} />
+
+      {activeBranch && (
+        <motion.div variants={item} className="mb-3 text-center text-[11px] tracking-wide text-text-muted">
+          {t('skillTree.filteredBy', {
+            defaultValue: 'Filtering by: {{branch}}',
+            branch: getBranchLabel(
+              activeBranch,
+              branches.find((branch) => branch.id === activeBranch)?.name ?? activeBranch,
+              t,
+            ),
+          })}
+        </motion.div>
+      )}
 
       {/* Desktop SVG tree */}
       <motion.div variants={item} className="hidden lg:block">
@@ -1103,10 +1218,10 @@ export default function SkillTree() {
               style={{ minHeight: 500 }}
             >
               {/* Radial grid lines (decorative) */}
-              {[80, 160, 240, 320].map((r) => (
+              {gridRadii.map((r) => (
                 <circle
                   key={r}
-                  cx={cx} cy={CENTER_Y} r={r}
+                  cx={cx} cy={layout.centerY} r={r}
                   fill="none"
                   stroke="var(--color-surface-dim)"
                   strokeWidth={0.5}
@@ -1115,23 +1230,20 @@ export default function SkillTree() {
               ))}
 
               {/* Connection lines */}
-              {branches.map((branch, bi) => {
-                const positions = getNodePositions(bi).map((p) => ({
-                  x: p.x + cx,
-                  y: p.y,
-                }))
-                const isFaded = activeBranch !== null && activeBranch !== branch.id
+              {branchRenderData.map(({ branch, positions }, bi) => {
+                if (positions.length === 0) return null
                 const isHighlighted = hoveredBranchId === branch.id
 
                 return (
                   <motion.g
                     key={`lines-${branch.id}`}
-                    animate={{ opacity: isFaded ? 0.12 : 1 }}
-                    transition={{ duration: 0.3 }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.25 }}
                   >
                     {/* Center to first node */}
                     <AnimatedLine
-                      x1={cx} y1={CENTER_Y}
+                      x1={cx} y1={layout.centerY}
                       x2={positions[0].x} y2={positions[0].y}
                       color={branch.color}
                       unlocked={branch.skills[0].unlocked}
@@ -1141,7 +1253,7 @@ export default function SkillTree() {
                     {/* Particle on first connection */}
                     {branch.skills[0].unlocked && (
                       <ConnectionParticle
-                        x1={cx} y1={CENTER_Y}
+                        x1={cx} y1={layout.centerY}
                         x2={positions[0].x} y2={positions[0].y}
                         color={branch.color}
                         delay={bi * 0.8}
@@ -1174,21 +1286,16 @@ export default function SkillTree() {
               })}
 
               {/* Center node */}
-              <CenterNode cx={cx} powerScore={stats.powerScore} />
+              <CenterNode cx={cx} centerY={layout.centerY} powerScore={stats.powerScore} />
 
               {/* Branch nodes */}
-              {branches.map((branch, bi) => {
-                const positions = getNodePositions(bi).map((p) => ({
-                  x: p.x + cx,
-                  y: p.y,
-                }))
-                const isFaded = activeBranch !== null && activeBranch !== branch.id
-
+              {branchRenderData.map(({ branch, positions, labelVectorX, labelVectorY }, bi) => {
                 return (
                   <motion.g
                     key={`nodes-${branch.id}`}
-                    animate={{ opacity: isFaded ? 0.12 : 1 }}
-                    transition={{ duration: 0.3 }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.2 }}
                   >
                     {branch.skills.map((skill, si) => (
                       <TreeNode
@@ -1203,6 +1310,8 @@ export default function SkillTree() {
                         isHovered={hoveredNode === `${branch.id}:${skill.id}`}
                         onHover={setHoveredNode}
                         branchId={branch.id}
+                        labelVectorX={labelVectorX}
+                        labelVectorY={labelVectorY}
                       />
                     ))}
                   </motion.g>
@@ -1210,26 +1319,19 @@ export default function SkillTree() {
               })}
 
               {/* Branch labels */}
-              {branches.map((branch, bi) => {
-                const positions = getNodePositions(bi).map((p) => ({
-                  x: p.x + cx,
-                  y: p.y,
-                }))
-                const last = positions[positions.length - 1]
-                const labelOffset = bi === 0 ? -36 : 36
-                const isFaded = activeBranch !== null && activeBranch !== branch.id
-
+              {branchRenderData.map(({ branch, branchLabelX, branchLabelY, textAnchor }, bi) => {
                 return (
                   <motion.g
                     key={`label-${branch.id}`}
                     initial={{ opacity: 0 }}
-                    animate={{ opacity: isFaded ? 0.1 : 1 }}
+                    animate={{ opacity: 1 }}
                     transition={{ delay: 1 + bi * 0.15, duration: 0.3 }}
                   >
                     <text
-                      x={last.x}
-                      y={last.y + labelOffset}
-                      textAnchor="middle"
+                      x={branchLabelX}
+                      y={branchLabelY}
+                      textAnchor={textAnchor}
+                      dominantBaseline="middle"
                       fontSize="11"
                       fontFamily="Cinzel, serif"
                       fill={branch.color}
@@ -1239,9 +1341,10 @@ export default function SkillTree() {
                     </text>
                     {/* Branch progress */}
                     <text
-                      x={last.x}
-                      y={last.y + labelOffset + 14}
-                      textAnchor="middle"
+                      x={branchLabelX}
+                      y={branchLabelY + 13}
+                      textAnchor={textAnchor}
+                      dominantBaseline="middle"
                       fontSize="8"
                       fontFamily="Raleway, sans-serif"
                       fill={`${branch.color}80`}
