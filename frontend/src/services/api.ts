@@ -5,6 +5,38 @@
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
+interface ApiMeta {
+  request_id?: string
+  flow?: string
+  source?: string
+  reason?: string
+  timestamp?: string
+}
+
+interface ApiSuccessEnvelope<T> {
+  ok: true
+  data: T
+  meta: ApiMeta
+}
+
+interface ApiErrorEnvelope {
+  ok: false
+  error: {
+    code: string
+    message: string
+    retryable: boolean
+    details: Record<string, unknown>
+  }
+  meta: ApiMeta
+}
+
+type ApiEnvelope<T> = ApiSuccessEnvelope<T> | ApiErrorEnvelope
+
+function isApiEnvelope(payload: unknown): payload is ApiEnvelope<unknown> {
+  if (!payload || typeof payload !== 'object') return false
+  return 'ok' in payload
+}
+
 async function fetchAPI<T>(path: string, options?: RequestInit): Promise<T | null> {
   try {
     const resp = await fetch(`${API_BASE}${path}`, {
@@ -13,7 +45,12 @@ async function fetchAPI<T>(path: string, options?: RequestInit): Promise<T | nul
       ...options,
     })
     if (!resp.ok) return null
-    return resp.json()
+    const payload: unknown = await resp.json()
+    if (isApiEnvelope(payload)) {
+      if (!payload.ok) return null
+      return payload.data as T
+    }
+    return payload as T
   } catch {
     return null
   }
@@ -25,6 +62,11 @@ async function readErrorMessage(response: Response, fallback: string): Promise<s
       detail?: unknown
       message?: unknown
       error?: unknown
+      ok?: unknown
+    }
+    if (payload.ok === false && typeof payload.error === 'object' && payload.error) {
+      const envError = payload.error as { message?: unknown }
+      if (typeof envError.message === 'string' && envError.message.trim()) return envError.message
     }
     if (typeof payload.message === 'string' && payload.message.trim()) return payload.message
     if (typeof payload.error === 'string' && payload.error.trim()) return payload.error
@@ -311,8 +353,14 @@ export const api = {
           message: await readErrorMessage(resp, 'Unable to analyze CV right now.'),
         }
       }
-      const data = (await resp.json()) as CVAnalysisResponse
-      return { ok: true, data }
+      const payload = (await resp.json()) as CVAnalysisResponse | ApiEnvelope<CVAnalysisResponse>
+      if (isApiEnvelope(payload)) {
+        if (!payload.ok) {
+          return { ok: false, message: payload.error.message || 'Unable to analyze CV right now.' }
+        }
+        return { ok: true, data: payload.data }
+      }
+      return { ok: true, data: payload as CVAnalysisResponse }
     } catch {
       return { ok: false, message: 'Network error while uploading CV.' }
     }
