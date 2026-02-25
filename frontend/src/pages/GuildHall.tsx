@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import {
   Upload, Wand2, Swords, Brain, Eye, Heart, FileText, Download,
@@ -45,6 +45,9 @@ const TITLE_ICONS: Record<string, typeof Flame> = {
   flame: Flame, code: Code, shield: Shield, trophy: Trophy,
   bug: Flame, star: Sparkles, scroll: ScrollText, sword: Swords,
 }
+
+const MAX_CV_SIZE_BYTES = 5 * 1024 * 1024
+const ALLOWED_CV_EXTENSIONS = new Set(['.pdf', '.doc', '.docx'])
 
 /* ═══════════════════════════════════════════
    FALLBACK DATA
@@ -310,6 +313,24 @@ function formatFileSize(bytes: number): string {
   return `${bytes} B`
 }
 
+function fileExtension(name: string): string {
+  const idx = name.lastIndexOf('.')
+  return idx >= 0 ? name.slice(idx).toLowerCase() : ''
+}
+
+function toCVMessage(raw: string): string {
+  const key = raw.trim().toLowerCase()
+  if (!key) return 'An unexpected error occurred.'
+  if (key.includes('unsupported_file_type')) return 'Unsupported file type. Use PDF, DOC, or DOCX.'
+  if (key.includes('file_too_large')) return 'File is too large. Maximum size is 5MB.'
+  if (key.includes('empty_file')) return 'The selected file is empty.'
+  if (key.includes('network')) return 'Network error. Check backend/API connection and try again.'
+  if (key.includes('unable to analyze')) return 'Unable to analyze CV right now. Please try again.'
+  if (key.includes('unable to generate')) return 'Unable to generate RPG CV PDF right now.'
+  if (key.includes('player_profile_not_found')) return 'Player profile not found. Unable to generate PDF.'
+  return raw
+}
+
 function generateRPGCV(
   profile: ProfileResponse,
   skills: SkillsResponse,
@@ -374,11 +395,12 @@ export default function GuildHall() {
   /* ─── Local state ─── */
   const [currentFile, setCurrentFile] = useState<File | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [isDownloading, setIsDownloading] = useState(false)
   const [currentAnalysis, setCurrentAnalysis] = useState<CVAnalysisResponse | null>(null)
   const [isDragOver, setIsDragOver] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
   const [analyses, setAnalyses] = useState<CVAnalysisResponse[]>([])
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [cvStatus, setCVStatus] = useState<{ tone: 'success' | 'error'; message: string } | null>(null)
 
   /* ─── Derived data ─── */
   const allAnalyses = useMemo(() => {
@@ -413,31 +435,71 @@ export default function GuildHall() {
 
   /* ─── Handlers ─── */
   const handleFile = useCallback((file: File) => {
-    if (file.size > 5 * 1024 * 1024) return
+    const extension = fileExtension(file.name)
+    if (!ALLOWED_CV_EXTENSIONS.has(extension)) {
+      setCVStatus({ tone: 'error', message: 'Unsupported file type. Use PDF, DOC, or DOCX.' })
+      return
+    }
+    if (file.size > MAX_CV_SIZE_BYTES) {
+      setCVStatus({ tone: 'error', message: 'File is too large. Maximum size is 5MB.' })
+      return
+    }
     setCurrentFile(file)
     setCurrentAnalysis(null)
+    setCVStatus({ tone: 'success', message: `Selected file: ${file.name}` })
   }, [])
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     setIsDragOver(false)
     const file = e.dataTransfer.files[0]
-    if (file) handleFile(file)
+    if (!file) {
+      setCVStatus({ tone: 'error', message: 'No file detected in drop action.' })
+      return
+    }
+    handleFile(file)
   }, [handleFile])
 
   const handleAnalyze = useCallback(async () => {
-    if (!currentFile) return
+    if (!currentFile) {
+      setCVStatus({ tone: 'error', message: 'Select a CV file before analyzing.' })
+      return
+    }
+    setCVStatus(null)
     setIsAnalyzing(true)
     const result = await api.uploadCV(currentFile)
     setIsAnalyzing(false)
-    if (result) {
-      setCurrentAnalysis(result)
-      setAnalyses(prev => [result, ...prev])
-      if (result.gamification) showXPGain(result.gamification)
+    if (!result.ok) {
+      setCVStatus({ tone: 'error', message: toCVMessage(result.message) })
+      return
     }
+
+    const analysis = result.data
+    setCurrentAnalysis(analysis)
+    setAnalyses(prev => [analysis, ...prev])
+    setCVStatus({ tone: 'success', message: 'CV analyzed successfully.' })
+    if (analysis.gamification) showXPGain(analysis.gamification)
   }, [currentFile, showXPGain])
 
-  const handleDownload = useCallback(() => {
+  const handleDownload = useCallback(async () => {
+    setCVStatus(null)
+    setIsDownloading(true)
+    const result = await api.downloadRPGCV()
+    setIsDownloading(false)
+
+    if (result.ok) {
+      const url = URL.createObjectURL(result.blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = result.filename
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      setCVStatus({ tone: 'success', message: `Downloaded PDF: ${result.filename}` })
+      return
+    }
+
     const text = generateRPGCV(profile, skillsData, achievementsData)
     const blob = new Blob([text], { type: 'text/plain;charset=utf-8' })
     const url = URL.createObjectURL(blob)
@@ -448,6 +510,10 @@ export default function GuildHall() {
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
+    setCVStatus({
+      tone: 'error',
+      message: `${toCVMessage(result.message)} Downloaded TXT fallback instead.`,
+    })
   }, [profile, skillsData, achievementsData])
 
   return (
@@ -609,7 +675,7 @@ export default function GuildHall() {
           {/* Upload Zone */}
           <motion.div
             variants={item}
-            className={`group cursor-pointer rounded-xl border-2 border-dashed p-8 text-center transition-all duration-200 ${
+            className={`relative overflow-hidden group cursor-pointer rounded-xl border-2 border-dashed p-8 text-center transition-all duration-200 ${
               isDragOver
                 ? 'border-accent-green/50 bg-accent-green/10'
                 : currentFile
@@ -619,16 +685,19 @@ export default function GuildHall() {
             onDragOver={(e) => { e.preventDefault(); setIsDragOver(true) }}
             onDragLeave={() => setIsDragOver(false)}
             onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
           >
             <input
-              ref={fileInputRef}
               type="file"
               accept=".pdf,.doc,.docx"
-              className="hidden"
+              className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
+              aria-label="Upload CV file"
+              onDragOver={(e) => { e.preventDefault(); setIsDragOver(true) }}
+              onDragLeave={() => setIsDragOver(false)}
+              onDrop={handleDrop}
               onChange={(e) => {
-                const file = e.target.files?.[0]
+                const file = e.currentTarget.files?.[0]
                 if (file) handleFile(file)
+                e.currentTarget.value = ''
               }}
             />
 
@@ -646,7 +715,7 @@ export default function GuildHall() {
                 <p className="font-heading text-sm tracking-wide text-text-secondary">
                   Drop your CV scroll here
                 </p>
-                <p className="mt-1 text-[10px] text-text-muted">PDF, DOC up to 5MB</p>
+                <p className="mt-1 text-[10px] text-text-muted">PDF, DOC, DOCX up to 5MB - click to select</p>
               </>
             )}
           </motion.div>
@@ -676,6 +745,19 @@ export default function GuildHall() {
               </>
             )}
           </motion.button>
+
+          {cvStatus && (
+            <motion.div
+              variants={item}
+              className={`rounded-lg border px-3 py-2 text-xs ${
+                cvStatus.tone === 'success'
+                  ? 'border-accent-green/30 bg-accent-green/10 text-accent-green'
+                  : 'border-accent-red/30 bg-accent-red/10 text-accent-red'
+              }`}
+            >
+              {cvStatus.message}
+            </motion.div>
+          )}
 
           {/* Analysis Panel */}
           <AnimatePresence>
@@ -860,12 +942,26 @@ export default function GuildHall() {
           <motion.button
             variants={item}
             onClick={handleDownload}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-border-subtle/30 bg-bg-card/20 px-6 py-3 font-heading text-xs tracking-widest text-text-muted uppercase transition-all hover:border-accent-gold/30 hover:text-accent-gold"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+            disabled={isDownloading}
+            className="relative z-20 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-border-subtle/30 bg-bg-card/20 px-6 py-3 font-heading text-xs tracking-widest text-text-muted uppercase transition-all hover:border-accent-gold/30 hover:text-accent-gold disabled:cursor-not-allowed disabled:opacity-40"
+            whileHover={!isDownloading ? { scale: 1.02 } : undefined}
+            whileTap={!isDownloading ? { scale: 0.98 } : undefined}
           >
-            <Download className="h-4 w-4" />
-            Download RPG CV
+            {isDownloading ? (
+              <>
+                <motion.div
+                  className="h-4 w-4 rounded-full border-2 border-accent-gold/30 border-t-accent-gold"
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
+                />
+                Generating PDF...
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4" />
+                Download RPG CV
+              </>
+            )}
           </motion.button>
         </div>
       </div>

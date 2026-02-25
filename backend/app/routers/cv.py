@@ -1,17 +1,28 @@
 """CV upload and analysis endpoints with SQLite persistence."""
 
+import io
 import json
 from datetime import datetime, timezone
+from pathlib import Path
 
-from fastapi import APIRouter, Depends, UploadFile, File
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi.responses import StreamingResponse
 from sqlmodel import Session, select
 
 from app.database import get_session
 from app.models import CVAnalysis
+from app.services.cv_export_service import (
+    CVExportError,
+    CVExportNotFoundError,
+    generate_rpg_cv_pdf,
+)
 from app.services.cv_service import analyze_uploaded_cv
 from app.services.gamification_engine import award_xp
 
 router = APIRouter(prefix="/cv", tags=["cv"])
+
+MAX_UPLOAD_BYTES = 5 * 1024 * 1024
+ALLOWED_CV_EXTENSIONS = {".pdf", ".doc", ".docx"}
 
 
 def _format_analysis(record: CVAnalysis) -> dict:
@@ -35,9 +46,17 @@ async def upload_cv(
     session: Session = Depends(get_session),
 ):
     """Accept file upload, run structured analysis, persist to DB."""
-    contents = await file.read()
     filename = file.filename or "unknown.pdf"
+    extension = Path(filename).suffix.lower()
+    if extension not in ALLOWED_CV_EXTENSIONS:
+        raise HTTPException(status_code=400, detail="unsupported_file_type")
+
+    contents = await file.read()
     file_size = len(contents)
+    if file_size <= 0:
+        raise HTTPException(status_code=400, detail="empty_file")
+    if file_size > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=400, detail="file_too_large")
 
     service_result = await analyze_uploaded_cv(filename=filename, file_size=file_size, contents=contents)
     result = service_result.analysis.model_dump()
@@ -80,3 +99,20 @@ async def get_analyses(session: Session = Depends(get_session)):
     statement = select(CVAnalysis).order_by(CVAnalysis.id.desc())  # type: ignore[union-attr]
     records = session.exec(statement).all()
     return {"analyses": [_format_analysis(r) for r in records]}
+
+
+@router.get("/download-rpg")
+async def download_rpg_cv(session: Session = Depends(get_session)):
+    """Generate and download RPG CV as a PDF document."""
+    try:
+        pdf_bytes, filename = generate_rpg_cv_pdf(session)
+    except CVExportNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except CVExportError as exc:
+        raise HTTPException(status_code=500, detail="cv_export_failed") from exc
+
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
