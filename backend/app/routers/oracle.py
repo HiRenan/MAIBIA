@@ -1,14 +1,14 @@
-"""Oracle chat endpoints — DB-persisted chat with context-aware mock AI."""
+"""Oracle chat endpoints — session-scoped chat with context-aware LLM responses."""
 
 from datetime import datetime, timezone
+from uuid import uuid4
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
 from sqlmodel import Session, col, func, select
 
 from app.database import get_session
 from app.models import ChatMessage, PlayerProfile, Skill
-from app.services.gamification_engine import award_xp
 from app.services.mock_ai import weekly_summary
 from app.services.oracle_service import generate_oracle_reply
 
@@ -17,6 +17,16 @@ router = APIRouter(prefix="/oracle", tags=["oracle"])
 
 class ChatRequest(BaseModel):
     message: str
+
+
+def _get_oracle_session_id(request: Request) -> str:
+    session_id = request.session.get("oracle_session_id")
+    if isinstance(session_id, str) and session_id.strip():
+        return session_id
+
+    session_id = uuid4().hex
+    request.session["oracle_session_id"] = session_id
+    return session_id
 
 
 def _get_profile_dict(session: Session) -> dict | None:
@@ -44,9 +54,10 @@ def _get_skills_list(session: Session) -> list[dict]:
     ]
 
 
-def _get_recent_history(session: Session, limit: int = 10) -> list[dict]:
+def _get_recent_history(session: Session, session_id: str, limit: int = 10) -> list[dict]:
     messages = session.exec(
         select(ChatMessage)
+        .where(ChatMessage.session_id == session_id)
         .order_by(col(ChatMessage.id).desc())
         .limit(limit)
     ).all()
@@ -58,14 +69,25 @@ def _get_recent_history(session: Session, limit: int = 10) -> list[dict]:
 
 
 @router.post("/chat")
-async def chat(req: ChatRequest, session: Session = Depends(get_session)):
+async def chat(
+    req: ChatRequest,
+    request: Request,
+    session: Session = Depends(get_session),
+):
     """Process chat message with LLM-backed Oracle and persist both sides."""
     now = datetime.now(timezone.utc).isoformat()
+    session_id = _get_oracle_session_id(request)
     user_message = req.message.strip()
-    recent_history = _get_recent_history(session, limit=10)
+    recent_history = _get_recent_history(session, session_id=session_id, limit=10)
 
     # Persist user message
-    user_msg = ChatMessage(role="user", text=user_message, context_topic="", created_at=now)
+    user_msg = ChatMessage(
+        session_id=session_id,
+        role="user",
+        text=user_message,
+        context_topic="",
+        created_at=now,
+    )
     session.add(user_msg)
 
     # Get context from DB for richer responses
@@ -82,26 +104,34 @@ async def chat(req: ChatRequest, session: Session = Depends(get_session)):
 
     # Persist Oracle response
     oracle_msg = ChatMessage(
-        role="oracle", text=result.text, context_topic=result.topic, created_at=now,
+        session_id=session_id,
+        role="oracle",
+        text=result.text,
+        context_topic=result.topic,
+        created_at=now,
     )
     session.add(oracle_msg)
     session.commit()
 
-    # Award XP for consulting the Oracle
-    gamification = award_xp(session, "oracle_chat", f"Consulted Oracle: {result.topic}", 25)
-
-    return {"role": "oracle", "text": result.text, "topic": result.topic, "gamification": gamification}
+    return {"role": "oracle", "text": result.text, "topic": result.topic, "gamification": None}
 
 
 @router.get("/history")
 async def get_history(
-    limit: int = 50, offset: int = 0, session: Session = Depends(get_session),
+    request: Request,
+    limit: int = 50,
+    offset: int = 0,
+    session: Session = Depends(get_session),
 ):
-    """Return paginated chat history in chronological order."""
-    total = session.exec(select(func.count(ChatMessage.id))).one()
+    """Return paginated chat history for current browser session."""
+    session_id = _get_oracle_session_id(request)
+    total = session.exec(
+        select(func.count(ChatMessage.id)).where(ChatMessage.session_id == session_id)
+    ).one()
 
     messages = session.exec(
         select(ChatMessage)
+        .where(ChatMessage.session_id == session_id)
         .order_by(col(ChatMessage.id).asc())
         .offset(offset)
         .limit(limit)
@@ -118,15 +148,13 @@ async def get_history(
 
 
 @router.get("/stats")
-async def get_stats(session: Session = Depends(get_session)):
-    """Oracle stats for the stats bar."""
-    user_count = session.exec(
-        select(func.count(ChatMessage.id)).where(ChatMessage.role == "user")
-    ).one()
-
+async def get_stats(request: Request, session: Session = Depends(get_session)):
+    """Oracle stats for current browser session."""
+    session_id = _get_oracle_session_id(request)
     # Unique topics explored
     topics = session.exec(
         select(ChatMessage.context_topic)
+        .where(ChatMessage.session_id == session_id)
         .where(ChatMessage.role == "oracle")
         .where(ChatMessage.context_topic != "")
     ).all()
@@ -136,23 +164,21 @@ async def get_stats(session: Session = Depends(get_session)):
     profile = session.exec(select(PlayerProfile)).first()
     wisdom_score = profile.wisdom if profile else 70
 
-    # Oracle level: 1 + messages/5, capped at 20
-    oracle_level = min(1 + user_count // 5, 20)
-
     return {
-        "messages_sent": user_count,
         "wisdom_score": wisdom_score,
         "topics_explored": unique_topics,
-        "oracle_level": oracle_level,
     }
 
 
 @router.get("/weekly-summary")
-async def get_weekly(session: Session = Depends(get_session)):
+async def get_weekly(request: Request, session: Session = Depends(get_session)):
     """Structured weekly summary with Oracle insights."""
+    session_id = _get_oracle_session_id(request)
     profile = _get_profile_dict(session)
     summary = weekly_summary(profile=profile)
 
-    total = session.exec(select(func.count(ChatMessage.id))).one()
+    total = session.exec(
+        select(func.count(ChatMessage.id)).where(ChatMessage.session_id == session_id)
+    ).one()
     summary["total_messages"] = total
     return summary

@@ -9,6 +9,7 @@ async function fetchAPI<T>(path: string, options?: RequestInit): Promise<T | nul
   try {
     const resp = await fetch(`${API_BASE}${path}`, {
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       ...options,
     })
     if (!resp.ok) return null
@@ -249,10 +250,8 @@ export interface OracleHistoryResponse {
 }
 
 export interface OracleStatsResponse {
-  messages_sent: number
   wisdom_score: number
   topics_explored: number
-  oracle_level: number
 }
 
 export interface OracleWeeklySummaryResponse {
@@ -300,7 +299,11 @@ export const api = {
     try {
       const form = new FormData()
       form.append('file', file)
-      const resp = await fetch(`${API_BASE}/cv/upload`, { method: 'POST', body: form })
+      const resp = await fetch(`${API_BASE}/cv/upload`, {
+        method: 'POST',
+        body: form,
+        credentials: 'include',
+      })
       if (!resp.ok) {
         return {
           ok: false,
@@ -316,7 +319,10 @@ export const api = {
   },
   downloadRPGCV: async (): Promise<DownloadRPGCVResult> => {
     try {
-      const resp = await fetch(`${API_BASE}/cv/download-rpg`, { method: 'GET' })
+      const resp = await fetch(`${API_BASE}/cv/download-rpg`, {
+        method: 'GET',
+        credentials: 'include',
+      })
       if (!resp.ok) {
         return {
           ok: false,

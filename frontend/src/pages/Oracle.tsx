@@ -2,8 +2,9 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { useTranslation } from 'react-i18next'
 import {
-  Sparkles, Send, User, MessageCircle, Brain, Compass, Flame,
-  Scroll, BookOpen, Zap, ChevronRight, Star, TrendingUp,
+  Sparkles, Send, User, Brain, Compass, Flame,
+  Scroll, BookOpen, Zap, ChevronRight, TrendingUp,
+  type LucideIcon,
 } from 'lucide-react'
 import PageHeader from '../components/ui/PageHeader'
 import GlassCard from '../components/ui/GlassCard'
@@ -61,7 +62,8 @@ const ORACLE_TOPICS = [
    FALLBACK DATA
    ═══════════════════════════════════════════ */
 const FALLBACK_STATS: OracleStatsResponse = {
-  messages_sent: 0, wisdom_score: 70, topics_explored: 0, oracle_level: 1,
+  wisdom_score: 70,
+  topics_explored: 0,
 }
 
 const FALLBACK_HISTORY: OracleHistoryResponse = {
@@ -169,7 +171,7 @@ function MessageBubble({
 }
 
 function StatCard({ icon: Icon, label, value, color, suffix }: {
-  icon: typeof MessageCircle; label: string; value: number; color: string; suffix?: string
+  icon: LucideIcon; label: string; value: number; color: string; suffix?: string
 }) {
   return (
     <GlassCard accentColor={`${color}33`} hover corners className="p-4">
@@ -194,7 +196,7 @@ function StatCard({ icon: Icon, label, value, color, suffix }: {
 export default function Oracle() {
   const { t } = useTranslation()
   /* ── API data ── */
-  const { data: stats, loading: statsLoading } = useAPI<OracleStatsResponse>(
+  const { data: stats } = useAPI<OracleStatsResponse>(
     () => api.getOracleStats(), FALLBACK_STATS,
   )
   const { data: history } = useAPI<OracleHistoryResponse>(
@@ -211,7 +213,6 @@ export default function Oracle() {
   const [input, setInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const [animatingIndex, setAnimatingIndex] = useState(-1)
-  const [localStats, setLocalStats] = useState<OracleStatsResponse | null>(null)
   const chatRef = useRef<HTMLDivElement>(null)
 
   /* ── Derive messages: API history + session messages ── */
@@ -241,9 +242,6 @@ export default function Oracle() {
 
   useEffect(() => { scrollToBottom() }, [messages, isTyping, scrollToBottom])
 
-  /* ── Effective stats (API or local optimistic) ── */
-  const effectiveStats = useMemo(() => localStats || stats, [localStats, stats])
-
   /* ── Send message ── */
   const handleSend = useCallback((text: string) => {
     if (!text.trim() || isTyping) return
@@ -261,11 +259,6 @@ export default function Oracle() {
           setAnimatingIndex(historyMessages.length + prev.length)
           return [...prev, oracleMsg]
         })
-        // Optimistically update stats
-        setLocalStats((prev) => {
-          const base = prev || stats
-          return { ...base, messages_sent: base.messages_sent + 1 }
-        })
       }
 
       if (result?.text) {
@@ -277,7 +270,7 @@ export default function Oracle() {
         ), 800 + Math.random() * 500)
       }
     })
-  }, [isTyping, stats, historyMessages.length, showXPGain, t])
+  }, [isTyping, historyMessages.length, showXPGain, t])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -298,11 +291,9 @@ export default function Oracle() {
       />
 
       {/* ── Stats Bar ── */}
-      <motion.div variants={item} className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard icon={MessageCircle} label={t('oracle.stats.messagesSent')} value={effectiveStats.messages_sent} color="#8b5cf6" />
-        <StatCard icon={Brain} label={t('oracle.stats.wisdomScore')} value={effectiveStats.wisdom_score} color="#22c55e" />
-        <StatCard icon={Compass} label={t('oracle.stats.topicsExplored')} value={effectiveStats.topics_explored} color="#3b82f6" />
-        <StatCard icon={Star} label={t('oracle.stats.oracleLevel')} value={effectiveStats.oracle_level} color="#f0c040" />
+      <motion.div variants={item} className="grid grid-cols-2 gap-3 lg:grid-cols-2">
+        <StatCard icon={Brain} label={t('oracle.stats.wisdomScore')} value={stats.wisdom_score} color="#22c55e" />
+        <StatCard icon={Compass} label={t('oracle.stats.topicsExplored')} value={stats.topics_explored} color="#3b82f6" />
       </motion.div>
 
       {/* ── Main Layout ── */}
@@ -324,14 +315,9 @@ export default function Oracle() {
               <span className="font-heading text-[10px] tracking-[0.3em] text-text-muted uppercase">
                 {t('oracle.chamber')}
               </span>
-              {!statsLoading && (
-                <span className="ml-auto text-[10px] text-text-muted">
-                  {t('oracle.levelMessages', {
-                    level: effectiveStats.oracle_level,
-                    messages: effectiveStats.messages_sent,
-                  })}
-                </span>
-              )}
+              <span className="ml-auto text-[10px] text-text-muted">
+                {t('oracle.currentSessionLabel')}
+              </span>
             </div>
 
             {/* Messages area */}

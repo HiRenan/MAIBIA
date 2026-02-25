@@ -71,6 +71,7 @@ class CVAnalysis(SQLModel, table=True):
 
 class ChatMessage(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
+    session_id: str = Field(default="", index=True)
     role: str  # "user" or "oracle"
     text: str
     context_topic: str = ""  # matched keyword, for analytics

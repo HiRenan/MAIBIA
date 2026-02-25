@@ -8,6 +8,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlmodel import Session
+from starlette.middleware.sessions import SessionMiddleware
 
 from app.database import create_db_and_tables, engine
 from app.routers import blog, cv, gamification, github, oracle
@@ -31,6 +32,13 @@ _configure_logging()
 logger = logging.getLogger(__name__)
 
 
+def _env_bool(name: str, default: bool) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     create_db_and_tables()
@@ -43,11 +51,24 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="DevQuest API", version="0.1.0", lifespan=lifespan)
 
 frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
+session_secret_key = os.getenv("SESSION_SECRET_KEY", "devquest-local-session-secret")
+session_cookie_name = os.getenv("SESSION_COOKIE_NAME", "devquest_session")
+session_https_only = _env_bool("SESSION_HTTPS_ONLY", False)
+session_same_site = os.getenv("SESSION_SAME_SITE", "lax").strip().lower() or "lax"
+
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=session_secret_key,
+    session_cookie=session_cookie_name,
+    same_site=session_same_site,
+    https_only=session_https_only,
+    max_age=None,  # Browser session cookie: resets when browser closes.
+)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[frontend_url, "http://localhost:5173", "http://localhost:3000", "*"],
-    allow_credentials=False,
+    allow_origins=[frontend_url, "http://localhost:5173", "http://localhost:3000"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
