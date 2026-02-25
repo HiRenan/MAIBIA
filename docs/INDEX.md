@@ -6,6 +6,7 @@
 3. Tools (contratos JSON): [`tools/README.md`](../tools/README.md)
 4. Agents (orquestracao): [`agents/README.md`](../agents/README.md)
 5. Visao geral do projeto: [`README.md`](../README.md)
+6. Evidencias de uso de agente: [`docs/agent-usage.md`](../docs/agent-usage.md)
 
 ## Mapa Rapido por Fluxo
 
@@ -39,6 +40,8 @@
 3. Resiliencia/fallback: [`backend/app/services/llm_client.py`](../backend/app/services/llm_client.py), [`backend/app/services/oracle_service.py`](../backend/app/services/oracle_service.py), [`backend/app/services/cv_service.py`](../backend/app/services/cv_service.py), [`backend/app/services/repo_analysis_service.py`](../backend/app/services/repo_analysis_service.py)
 4. Contratos estruturados: [`tools/index.json`](../tools/index.json) e `tools/*.json`
 5. Prompt guardrails: [`prompts/system_prompt.txt`](../prompts/system_prompt.txt)
+6. Envelope de resposta: [`backend/app/services/response_envelope.py`](../backend/app/services/response_envelope.py)
+7. Redacao de logs: [`backend/app/services/log_safety.py`](../backend/app/services/log_safety.py)
 
 ## Checklist do Avaliador
 1. Encontrar prompt de cada fluxo em menos de 30s.
@@ -57,4 +60,5 @@
 3. [`agents/README.md`](../agents/README.md)
 4. [`docs/final/backlog-final.md`](../docs/final/backlog-final.md)
 5. [`docs/final/scope-freeze.md`](../docs/final/scope-freeze.md)
+6. [`docs/agent-usage.md`](../docs/agent-usage.md)
 

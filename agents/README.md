@@ -12,6 +12,7 @@ Documentar a orquestracao dos fluxos LLM em formato de "agentes de fluxo" para f
 1. Esta pasta descreve **orquestracao documental**.
 2. Nao introduz framework novo de agentes em runtime.
 3. Fonte de verdade de execucao continua em `backend/app/services/*`.
+4. Integracao real de tools no runtime do modelo ocorre apenas no fluxo Oracle nesta fase.
 
 ## Fluxos
 1. Oracle: [`agents/oracle-agent.md`](./oracle-agent.md)

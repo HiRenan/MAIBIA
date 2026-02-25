@@ -5,6 +5,10 @@ Disciplina: IA Generativa
 Fase: Avaliacao Final  
 Data da avaliacao final: 26/02/2026
 
+## 0) Links de Entrega
+1. Repositorio: `https://github.com/HiRenan/MAIBIA`
+2. Endpoint backend publico: `https://maibia-production.up.railway.app`
+
 ## 1) Problema e Solucao
 Portfolios tecnicos tradicionais mostram stack e projetos, mas raramente entregam orientacao personalizada e acionavel.
 
@@ -36,11 +40,12 @@ A prioridade da fase final foi engenharia de LLM (prompting, contratos, parametr
    - prompt especifico de fluxo (`oracle_prompt.md`, `cv_prompt.md`, `repo_prompt.md`)
    - contexto de aplicacao + contexto de seguranca.
 4. Service chama OpenAI via SDK oficial (`openai-python`).
-5. Service normaliza/valida saida:
+5. Oracle usa tool-calling real no runtime (`oracle_get_player_profile`, `oracle_get_player_skills`, `oracle_get_oracle_history`) com loop de `function_call -> function_call_output`.
+6. Service normaliza/valida saida:
    - Oracle: normalizacao textual com limite de formato.
    - CV/Repo: JSON schema estrito + validacao Pydantic.
-6. Em falha de provedor/parse/contexto: fallback gracioso para mock, mantendo contrato de resposta.
-7. Router persiste quando aplicavel (chat e analises) e retorna payload compativel com UI.
+7. Em falha de provedor/parse/contexto: fallback gracioso para mock, mantendo contrato de resposta.
+8. Router persiste quando aplicavel (chat e analises) e retorna envelope padrao `ok/data/meta`.
 
 ### 3.2 Fluxo Oracle
 - Endpoint: `POST /api/oracle/chat`
@@ -53,11 +58,19 @@ A prioridade da fase final foi engenharia de LLM (prompting, contratos, parametr
 - Contrato de resposta externo:
 ```json
 {
-  "role": "oracle",
-  "text": "...",
-  "topic": "skills|career|project|...",
-  "gamification": {
-    "xp_gained": 25
+  "ok": true,
+  "data": {
+    "role": "oracle",
+    "text": "...",
+    "topic": "skills|career|project|...",
+    "gamification": null
+  },
+  "meta": {
+    "flow": "oracle",
+    "source": "llm|fallback_mock|security_refusal",
+    "reason": "nullable",
+    "request_id": "uuid",
+    "timestamp": "ISO-8601"
   }
 }
 ```
@@ -73,11 +86,20 @@ A prioridade da fase final foi engenharia de LLM (prompting, contratos, parametr
 - Contrato de resposta externo (shape principal):
 ```json
 {
-  "score": 0,
-  "sections": [{"name": "", "score": 0, "feedback": ""}],
-  "strengths": [""],
-  "weaknesses": [""],
-  "tips": [""]
+  "ok": true,
+  "data": {
+    "score": 0,
+    "sections": [{"name": "", "score": 0, "feedback": ""}],
+    "strengths": [""],
+    "weaknesses": [""],
+    "tips": [""]
+  },
+  "meta": {
+    "flow": "cv",
+    "source": "llm|fallback_mock",
+    "request_id": "uuid",
+    "timestamp": "ISO-8601"
+  }
 }
 ```
 
@@ -92,19 +114,28 @@ A prioridade da fase final foi engenharia de LLM (prompting, contratos, parametr
 - Contrato de resposta externo:
 ```json
 {
-  "repo": "owner/repo",
-  "score": 0,
-  "strengths": [""],
-  "improvements": [""],
-  "summary": "",
-  "metrics": {
-    "code_quality": 0,
-    "documentation": 0,
-    "testing": 0,
-    "architecture": 0,
-    "security": 0
+  "ok": true,
+  "data": {
+    "repo": "owner/repo",
+    "score": 0,
+    "strengths": [""],
+    "improvements": [""],
+    "summary": "",
+    "metrics": {
+      "code_quality": 0,
+      "documentation": 0,
+      "testing": 0,
+      "architecture": 0,
+      "security": 0
+    },
+    "category_tags": [""]
   },
-  "category_tags": [""]
+  "meta": {
+    "flow": "repo",
+    "source": "llm|fallback_mock",
+    "request_id": "uuid",
+    "timestamp": "ISO-8601"
+  },
 }
 ```
 
@@ -155,6 +186,7 @@ Fonte de verdade: `.env.example` e `backend/README-env.md`.
 | --- | --- | --- |
 | `OPENAI_TIMEOUT_SECONDS` | `20` | Limite de latencia por chamada |
 | `OPENAI_MAX_RETRIES` | `2` | Retry do SDK para falhas transientes |
+| `OPENAI_ORACLE_TOOL_ROUND_LIMIT` | `3` | Maximo de rodadas de tool-calling por resposta Oracle |
 | `LLM_MAX_INSTRUCTIONS_CHARS` | `12000` | Limite de instrucoes |
 | `LLM_MAX_INPUT_CHARS` | `24000` | Limite de input |
 | `LLM_MAX_TOTAL_CHARS` | `32000` | Limite total de payload |
@@ -183,6 +215,11 @@ Convencoes principais:
 2. Envelope de sucesso e erro definido.
 3. Codigos de erro previsiveis (`VALIDATION_ERROR`, `UPSTREAM_TIMEOUT`, `RATE_LIMITED`, etc.).
 4. Politica por fluxo para uso controlado de tools.
+5. Oracle usa tool-calling real no modelo com aliases de runtime sem ponto:
+   - `oracle_get_player_profile`
+   - `oracle_get_player_skills`
+   - `oracle_get_oracle_history`
+6. CV e Repo mantem contratos de tools documentais/API nesta fase (sem tool-calling do modelo nesses fluxos).
 
 ## 8) Resiliencia, Degradacao e Seguranca
 ### 8.1 Resiliencia
@@ -197,7 +234,7 @@ Convencoes principais:
 
 ### 8.2 Seguranca e privacidade
 1. Nao expor `OPENAI_API_KEY` no frontend.
-2. Redacao de logs habilitavel por `LOG_REDACTION_ENABLED=true`.
+2. Redacao de logs habilitavel por `LOG_REDACTION_ENABLED=true` e aplicada por `backend/app/services/log_safety.py`.
 3. Politica de nao logar prompt completo, CV bruto e headers de autorizacao.
 4. Bloqueio de exfiltracao de segredo/prompt interno no Oracle.
 
@@ -252,12 +289,14 @@ npm run build
 
 # backend
 python -m compileall backend\app
+python -m pytest backend/tests -q
 
 # health
 curl http://127.0.0.1:8000/api/health
 ```
 
 ### 10.4 Teste manual rapido dos fluxos LLM
+Obs: os endpoints retornam envelope padrao `ok/data/meta`.
 ```bash
 # Oracle
 curl -sS -X POST "http://127.0.0.1:8000/api/oracle/chat" -H "Content-Type: application/json" --data-raw '{"message":"me da um plano de estudo de backend"}'
@@ -301,6 +340,7 @@ curl -sS -X POST "http://127.0.0.1:8000/api/github/repos/HiRenan/MAIBIA/analyze"
 4. Tools: `tools/README.md`
 5. Agents: `agents/README.md`
 6. Scope freeze/backlog: `docs/final/scope-freeze.md`, `docs/final/backlog-final.md`
+7. Evidencias de uso de agente: `docs/agent-usage.md`
 
 ## 13) Licenca
 Projeto academico para uso educacional.

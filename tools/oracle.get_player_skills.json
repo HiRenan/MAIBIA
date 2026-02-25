@@ -5,6 +5,7 @@
   "tool": {
     "type": "function",
     "name": "oracle.get_player_skills",
+    "runtime_name": "oracle_get_player_skills",
     "description": "Returns the player skills list for Oracle recommendations and gap analysis.",
     "strict": true,
     "parameters": {

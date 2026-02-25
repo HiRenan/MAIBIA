@@ -53,9 +53,10 @@ Definir contratos tipados de tools usados pelos fluxos Oracle, CV e Repo, com re
 | `repo.analyze_repo` | Repo | `POST /api/github/repos/{owner}/{repo}/analyze` | `backend/app/routers/github.py` | `app.services.repo_analysis_service.analyze_repository` |
 
 ## Politica por Fluxo (resumo de `tools/index.json`)
-1. Oracle: enabled por default.
-2. CV: enabled por default.
-3. Repo: disabled por default para controle de escopo/custo em runtime.
+1. Oracle: enabled por default e integrado em runtime via tool-calling do modelo.
+2. Oracle runtime aliases (restricao de nome do provedor): `oracle_get_player_profile`, `oracle_get_player_skills`, `oracle_get_oracle_history`.
+3. CV: contratos ativos para integracao API/documentacao; sem tool-calling do modelo nesta fase.
+4. Repo: contratos ativos para integracao API/documentacao; sem tool-calling do modelo nesta fase.
 
 ## Codigos de Erro (referencia)
 1. `VALIDATION_ERROR`

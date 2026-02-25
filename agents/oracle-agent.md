@@ -15,6 +15,10 @@ Responder perguntas de mentoria de carreira com tom pratico, mantendo seguranca 
 1. [`tools/oracle.get_player_profile.json`](../tools/oracle.get_player_profile.json)
 2. [`tools/oracle.get_player_skills.json`](../tools/oracle.get_player_skills.json)
 3. [`tools/oracle.get_oracle_history.json`](../tools/oracle.get_oracle_history.json)
+4. Runtime aliases usados no provider:
+   - `oracle_get_player_profile`
+   - `oracle_get_player_skills`
+   - `oracle_get_oracle_history`
 
 ## Output Esperado
 1. Texto curto com a estrutura definida no fluxo Oracle.

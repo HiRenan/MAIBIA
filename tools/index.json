@@ -141,7 +141,7 @@
       }
     },
     "cv": {
-      "enabled_by_default": true,
+      "enabled_by_default": false,
       "tool_choice": {
         "type": "allowed_tools",
         "mode": "auto",
@@ -187,58 +187,63 @@
     {
       "name": "oracle.get_player_profile",
       "flow": "oracle",
-      "status": "enabled",
+      "status": "enabled_runtime",
       "file": "tools/oracle.get_player_profile.json"
     },
     {
       "name": "oracle.get_player_skills",
       "flow": "oracle",
-      "status": "enabled",
+      "status": "enabled_runtime",
       "file": "tools/oracle.get_player_skills.json"
     },
     {
       "name": "oracle.get_oracle_history",
       "flow": "oracle",
-      "status": "enabled",
+      "status": "enabled_runtime",
       "file": "tools/oracle.get_oracle_history.json"
     },
     {
       "name": "cv.get_latest_analysis",
       "flow": "cv",
-      "status": "enabled",
+      "status": "enabled_contract_only",
       "file": "tools/cv.get_latest_analysis.json"
     },
     {
       "name": "cv.list_analyses",
       "flow": "cv",
-      "status": "enabled",
+      "status": "enabled_contract_only",
       "file": "tools/cv.list_analyses.json"
     },
     {
       "name": "repo.get_repos",
       "flow": "repo",
-      "status": "disabled_default",
+      "status": "enabled_contract_only",
       "file": "tools/repo.get_repos.json"
     },
     {
       "name": "repo.get_repo_detail",
       "flow": "repo",
-      "status": "disabled_default",
+      "status": "enabled_contract_only",
       "file": "tools/repo.get_repo_detail.json"
     },
     {
       "name": "repo.get_github_profile",
       "flow": "repo",
-      "status": "disabled_default",
+      "status": "enabled_contract_only",
       "file": "tools/repo.get_github_profile.json"
     },
     {
       "name": "repo.analyze_repo",
       "flow": "repo",
-      "status": "disabled_default",
+      "status": "enabled_contract_only",
       "file": "tools/repo.analyze_repo.json"
     }
   ],
+  "oracle_runtime_aliases": {
+    "oracle_get_player_profile": "oracle.get_player_profile",
+    "oracle_get_player_skills": "oracle.get_player_skills",
+    "oracle_get_oracle_history": "oracle.get_oracle_history"
+  },
   "security_policy": {
     "untrusted_sources": [
       "user_message",
