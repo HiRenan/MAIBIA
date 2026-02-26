@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 import { Zap, Trophy, Star, ChevronUp } from 'lucide-react'
 import type { GamificationEvent, AchievementData } from '../services/api'
 
@@ -31,6 +32,7 @@ export const useGamification = () => useContext(GamificationContext)
    TOAST COMPONENTS
    ═══════════════════════════════════════════ */
 function XPToast({ xp }: { xp: number }) {
+  const { t } = useTranslation()
   return (
     <div className="flex items-center gap-3">
       <div
@@ -41,13 +43,14 @@ function XPToast({ xp }: { xp: number }) {
       </div>
       <div>
         <p className="font-display text-sm tracking-tight text-accent-gold">+{xp} XP</p>
-        <p className="text-[10px] text-text-muted">Experience gained</p>
+        <p className="text-[10px] text-text-muted">{t('gamification.experienceGained')}</p>
       </div>
     </div>
   )
 }
 
 function AchievementToast({ achievement }: { achievement: AchievementData }) {
+  const { t } = useTranslation()
   return (
     <div className="flex items-center gap-3">
       <div
@@ -58,7 +61,7 @@ function AchievementToast({ achievement }: { achievement: AchievementData }) {
       </div>
       <div>
         <p className="font-heading text-[10px] tracking-[0.2em] text-accent-gold uppercase">
-          Achievement Unlocked
+          {t('gamification.achievementUnlocked')}
         </p>
         <p className="text-xs font-medium text-text-primary">{achievement.name}</p>
         <p className="text-[10px] text-text-muted">{achievement.description}</p>
@@ -68,6 +71,7 @@ function AchievementToast({ achievement }: { achievement: AchievementData }) {
 }
 
 function ToastStack({ toasts }: { toasts: Toast[] }) {
+  const { t } = useTranslation()
   return (
     <div className="fixed top-4 right-4 z-[60] flex flex-col gap-2" style={{ maxWidth: 'min(320px, calc(100vw - 2rem))' }}>
       <AnimatePresence mode="popLayout">
@@ -114,9 +118,9 @@ function ToastStack({ toasts }: { toasts: Toast[] }) {
                 </div>
                 <div>
                   <p className="font-heading text-[10px] tracking-[0.2em] text-accent-gold uppercase">
-                    Level Up!
+                    {t('gamification.levelUp')}
                   </p>
-                  <p className="font-display text-lg text-text-primary">Level {toast.level}</p>
+                  <p className="font-display text-lg text-text-primary">{t('navbar.level')} {toast.level}</p>
                 </div>
               </div>
             )}
@@ -131,6 +135,7 @@ function ToastStack({ toasts }: { toasts: Toast[] }) {
    LEVEL-UP MODAL
    ═══════════════════════════════════════════ */
 function LevelUpModal({ level, onClose }: { level: number | null; onClose: () => void }) {
+  const { t } = useTranslation()
   useEffect(() => {
     if (level !== null) {
       const timer = setTimeout(onClose, 5000)
@@ -188,7 +193,7 @@ function LevelUpModal({ level, onClose }: { level: number | null; onClose: () =>
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.3 }}
             >
-              Level Up!
+              {t('gamification.levelUp')}
             </motion.h2>
 
             {/* Level number */}
@@ -208,7 +213,7 @@ function LevelUpModal({ level, onClose }: { level: number | null; onClose: () =>
               animate={{ opacity: 1 }}
               transition={{ delay: 0.7 }}
             >
-              New abilities await...
+              {t('gamification.newAbilitiesAwait')}
             </motion.p>
           </motion.div>
         </motion.div>

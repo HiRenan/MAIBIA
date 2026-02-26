@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 import {
-  Sparkles, Send, User, MessageCircle, Brain, Compass, Flame,
-  Scroll, BookOpen, Zap, ChevronRight, Star, TrendingUp,
+  Sparkles, Send, User, Brain, Compass, Flame,
+  Scroll, BookOpen, Zap, ChevronRight, TrendingUp,
+  type LucideIcon,
 } from 'lucide-react'
 import PageHeader from '../components/ui/PageHeader'
 import GlassCard from '../components/ui/GlassCard'
@@ -39,28 +41,29 @@ interface ChatMsg {
 }
 
 const SUGGESTIONS = [
-  { text: 'How can I improve?', icon: TrendingUp },
-  { text: 'Analyze my skills', icon: Zap },
-  { text: 'Career advice', icon: Compass },
-  { text: 'Profile overview', icon: User },
-  { text: 'What should I learn?', icon: BookOpen },
-  { text: 'My strengths', icon: Flame },
+  { key: 'oracle.suggestions.improve', icon: TrendingUp },
+  { key: 'oracle.suggestions.analyzeSkills', icon: Zap },
+  { key: 'oracle.suggestions.careerAdvice', icon: Compass },
+  { key: 'oracle.suggestions.profileOverview', icon: User },
+  { key: 'oracle.suggestions.learnNext', icon: BookOpen },
+  { key: 'oracle.suggestions.strengths', icon: Flame },
 ]
 
 const ORACLE_TOPICS = [
-  { label: 'Skill Progression', desc: 'Level up your tech abilities' },
-  { label: 'Career Path', desc: 'Navigate your developer journey' },
-  { label: 'Project Ideas', desc: 'New quests to embark on' },
-  { label: 'GitHub Strategy', desc: 'Boost your open-source presence' },
-  { label: 'Stat Analysis', desc: 'STR, INT, DEX, WIS breakdown' },
-  { label: 'Weekly Focus', desc: 'Actionable goals for this week' },
+  { id: 'skillProgression' },
+  { id: 'careerPath' },
+  { id: 'projectIdeas' },
+  { id: 'githubStrategy' },
+  { id: 'statAnalysis' },
+  { id: 'weeklyFocus' },
 ]
 
 /* ═══════════════════════════════════════════
    FALLBACK DATA
    ═══════════════════════════════════════════ */
 const FALLBACK_STATS: OracleStatsResponse = {
-  messages_sent: 0, wisdom_score: 70, topics_explored: 0, oracle_level: 1,
+  wisdom_score: 70,
+  topics_explored: 0,
 }
 
 const FALLBACK_HISTORY: OracleHistoryResponse = {
@@ -139,7 +142,7 @@ function MessageBubble({
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className={`flex gap-3 ${isOracle ? '' : 'flex-row-reverse'}`}
+      className={`flex min-w-0 gap-3 ${isOracle ? '' : 'flex-row-reverse'}`}
     >
       {/* Avatar */}
       <div
@@ -151,7 +154,7 @@ function MessageBubble({
       </div>
       {/* Bubble */}
       <div
-        className={`max-w-[80%] rounded-xl px-4 py-3 text-xs leading-relaxed ${
+        className={`min-w-0 max-w-[84%] overflow-hidden whitespace-pre-wrap break-all rounded-xl px-4 py-3 text-xs leading-relaxed ${
           isOracle
             ? 'rounded-tl-sm border border-accent-purple/15 bg-accent-purple/5 text-text-secondary'
             : 'rounded-tr-sm border border-accent-blue/15 bg-accent-blue/5 text-text-secondary'
@@ -168,7 +171,7 @@ function MessageBubble({
 }
 
 function StatCard({ icon: Icon, label, value, color, suffix }: {
-  icon: typeof MessageCircle; label: string; value: number; color: string; suffix?: string
+  icon: LucideIcon; label: string; value: number; color: string; suffix?: string
 }) {
   return (
     <GlassCard accentColor={`${color}33`} hover corners className="p-4">
@@ -191,8 +194,9 @@ function StatCard({ icon: Icon, label, value, color, suffix }: {
    MAIN COMPONENT
    ═══════════════════════════════════════════ */
 export default function Oracle() {
+  const { t } = useTranslation()
   /* ── API data ── */
-  const { data: stats, loading: statsLoading } = useAPI<OracleStatsResponse>(
+  const { data: stats } = useAPI<OracleStatsResponse>(
     () => api.getOracleStats(), FALLBACK_STATS,
   )
   const { data: history } = useAPI<OracleHistoryResponse>(
@@ -209,7 +213,6 @@ export default function Oracle() {
   const [input, setInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const [animatingIndex, setAnimatingIndex] = useState(-1)
-  const [localStats, setLocalStats] = useState<OracleStatsResponse | null>(null)
   const chatRef = useRef<HTMLDivElement>(null)
 
   /* ── Derive messages: API history + session messages ── */
@@ -219,6 +222,18 @@ export default function Oracle() {
   )
   const messages = useMemo(() => [...historyMessages, ...pendingMessages], [historyMessages, pendingMessages])
   const showSuggestions = messages.filter((m) => m.role === 'user').length === 0
+  const suggestions = useMemo(
+    () => SUGGESTIONS.map((item) => ({ text: t(item.key), icon: item.icon })),
+    [t],
+  )
+  const oracleTopics = useMemo(
+    () =>
+      ORACLE_TOPICS.map((topic) => ({
+        label: t(`oracle.topics.${topic.id}.label`),
+        desc: t(`oracle.topics.${topic.id}.desc`),
+      })),
+    [t],
+  )
 
   /* ── Scroll to bottom ── */
   const scrollToBottom = useCallback(() => {
@@ -226,9 +241,6 @@ export default function Oracle() {
   }, [])
 
   useEffect(() => { scrollToBottom() }, [messages, isTyping, scrollToBottom])
-
-  /* ── Effective stats (API or local optimistic) ── */
-  const effectiveStats = useMemo(() => localStats || stats, [localStats, stats])
 
   /* ── Send message ── */
   const handleSend = useCallback((text: string) => {
@@ -247,11 +259,6 @@ export default function Oracle() {
           setAnimatingIndex(historyMessages.length + prev.length)
           return [...prev, oracleMsg]
         })
-        // Optimistically update stats
-        setLocalStats((prev) => {
-          const base = prev || stats
-          return { ...base, messages_sent: base.messages_sent + 1 }
-        })
       }
 
       if (result?.text) {
@@ -259,11 +266,11 @@ export default function Oracle() {
         setTimeout(() => addResponse(result.text), 400 + Math.random() * 400)
       } else {
         setTimeout(() => addResponse(
-          'The ancient runes are unclear. Try asking about your skills, career, or technologies.',
+          t('oracle.fallbackUnclear'),
         ), 800 + Math.random() * 500)
       }
     })
-  }, [isTyping, stats, historyMessages.length, showXPGain])
+  }, [isTyping, historyMessages.length, showXPGain, t])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -277,29 +284,27 @@ export default function Oracle() {
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-6 pb-8">
       {/* ── Page Header ── */}
       <PageHeader
-        title="The Oracle"
-        subtitle="Your AI career advisor — ancient wisdom for modern developers"
+        title={t('oracle.title')}
+        subtitle={t('oracle.subtitle')}
         gradient="linear-gradient(135deg, #8b5cf6, #a78bfa, #c084fc)"
         glowColor="rgba(139, 92, 246, 0.3)"
       />
 
       {/* ── Stats Bar ── */}
-      <motion.div variants={item} className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard icon={MessageCircle} label="Messages Sent" value={effectiveStats.messages_sent} color="#8b5cf6" />
-        <StatCard icon={Brain} label="Wisdom Score" value={effectiveStats.wisdom_score} color="#22c55e" />
-        <StatCard icon={Compass} label="Topics Explored" value={effectiveStats.topics_explored} color="#3b82f6" />
-        <StatCard icon={Star} label="Oracle Level" value={effectiveStats.oracle_level} color="#f0c040" />
+      <motion.div variants={item} className="grid grid-cols-2 gap-3 lg:grid-cols-2">
+        <StatCard icon={Brain} label={t('oracle.stats.wisdomScore')} value={stats.wisdom_score} color="#22c55e" />
+        <StatCard icon={Compass} label={t('oracle.stats.topicsExplored')} value={stats.topics_explored} color="#3b82f6" />
       </motion.div>
 
       {/* ── Main Layout ── */}
-      <div className="grid gap-6 md:grid-cols-[1fr_280px] lg:grid-cols-[1fr_320px]">
+      <div className="min-w-0 grid gap-6 md:grid-cols-[1fr_280px] lg:grid-cols-[1fr_320px]">
         {/* ── Left: Chat Interface ── */}
-        <motion.div variants={item} className="flex flex-col">
+        <motion.div variants={item} className="min-w-0 flex flex-col">
           <GlassCard
             accentColor="rgba(139, 92, 246, 0.15)"
             hover={false}
             corners
-            className="flex flex-col min-h-[300px] sm:min-h-[420px]"
+            className="min-w-0 flex flex-col min-h-[300px] sm:min-h-[420px]"
             style={{ height: 'calc(100vh - 22rem)' }}
           >
             {/* Chat header */}
@@ -308,19 +313,17 @@ export default function Oracle() {
                 <Sparkles className="h-3 w-3 text-accent-purple" />
               </div>
               <span className="font-heading text-[10px] tracking-[0.3em] text-text-muted uppercase">
-                Oracle Chamber
+                {t('oracle.chamber')}
               </span>
-              {!statsLoading && (
-                <span className="ml-auto text-[10px] text-text-muted">
-                  Lv.{effectiveStats.oracle_level} — {effectiveStats.messages_sent} messages
-                </span>
-              )}
+              <span className="ml-auto text-[10px] text-text-muted">
+                {t('oracle.currentSessionLabel')}
+              </span>
             </div>
 
             {/* Messages area */}
             <div
               ref={chatRef}
-              className="flex-1 space-y-4 overflow-y-auto p-5"
+              className="flex-1 space-y-4 overflow-x-hidden overflow-y-auto p-5"
               style={{
                 background: 'linear-gradient(180deg, rgba(139, 92, 246, 0.02) 0%, var(--color-glass-bg) 100%)',
               }}
@@ -329,7 +332,7 @@ export default function Oracle() {
                 <div className="flex h-full items-center justify-center">
                   <div className="text-center">
                     <Scroll className="mx-auto mb-3 h-8 w-8 text-accent-purple/30" />
-                    <p className="text-xs text-text-muted">The Oracle awaits your questions...</p>
+                    <p className="text-xs text-text-muted">{t('oracle.awaiting')}</p>
                   </div>
                 </div>
               )}
@@ -365,9 +368,9 @@ export default function Oracle() {
                   exit={{ opacity: 0, height: 0 }}
                   className="border-t border-border-subtle/20 px-5 py-3"
                 >
-                  <p className="mb-2 text-[10px] text-text-muted uppercase tracking-widest">Suggested</p>
+                  <p className="mb-2 text-[10px] text-text-muted uppercase tracking-widest">{t('oracle.suggested')}</p>
                   <div className="flex flex-wrap gap-2">
-                    {SUGGESTIONS.map(({ text: s, icon: SIcon }) => (
+                    {suggestions.map(({ text: s, icon: SIcon }) => (
                       <motion.button
                         key={s}
                         whileHover={{ scale: 1.03 }}
@@ -389,7 +392,7 @@ export default function Oracle() {
               <div className="flex items-center gap-3 rounded-xl border border-border-subtle/30 bg-bg-primary/30 px-4 py-2.5 transition-colors focus-within:border-accent-purple/30">
                 <input
                   type="text"
-                  placeholder="Ask the Oracle a question..."
+                  placeholder={t('oracle.inputPlaceholder')}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
@@ -415,7 +418,7 @@ export default function Oracle() {
             <div className="mb-4 flex items-center gap-2">
               <Scroll className="h-4 w-4 text-accent-purple" />
               <h3 className="font-heading text-[10px] tracking-[0.3em] text-text-muted uppercase">
-                Weekly Scroll
+                {t('oracle.weeklyScroll')}
               </h3>
             </div>
 
@@ -429,20 +432,20 @@ export default function Oracle() {
                 <p className="font-display text-lg text-accent-gold">
                   +<AnimatedCounter value={weekly.xp_gained} duration={1} />
                 </p>
-                <p className="text-[9px] text-text-muted uppercase tracking-wider">XP Gained</p>
+                <p className="text-[9px] text-text-muted uppercase tracking-wider">{t('oracle.xpGained')}</p>
               </div>
               <div className="rounded-lg border border-accent-green/15 bg-accent-green/5 px-3 py-2 text-center">
                 <p className="font-display text-lg text-accent-green">
                   <AnimatedCounter value={weekly.quests_completed} duration={0.8} />
                 </p>
-                <p className="text-[9px] text-text-muted uppercase tracking-wider">Quests Done</p>
+                <p className="text-[9px] text-text-muted uppercase tracking-wider">{t('oracle.questsDone')}</p>
               </div>
             </div>
 
             {/* Skills practiced */}
             {weekly.skills_practiced.length > 0 && (
               <div className="mb-3">
-                <p className="mb-1.5 text-[9px] text-text-muted uppercase tracking-wider">Skills Practiced</p>
+                <p className="mb-1.5 text-[9px] text-text-muted uppercase tracking-wider">{t('oracle.skillsPracticed')}</p>
                 <div className="flex flex-wrap gap-1.5">
                   {weekly.skills_practiced.map((skill) => (
                     <span
@@ -458,7 +461,7 @@ export default function Oracle() {
 
             {/* Achievement progress */}
             <div className="mb-3 rounded-lg border border-border-subtle/20 bg-bg-primary/20 px-3 py-2">
-              <p className="text-[9px] text-text-muted uppercase tracking-wider">Achievement Progress</p>
+              <p className="text-[9px] text-text-muted uppercase tracking-wider">{t('oracle.achievementProgress')}</p>
               <p className="mt-0.5 text-xs text-text-secondary">{weekly.achievement_progress}</p>
             </div>
 
@@ -466,7 +469,7 @@ export default function Oracle() {
             <div className="rounded-lg border border-accent-gold/15 bg-accent-gold/5 px-3 py-2.5">
               <div className="mb-1 flex items-center gap-1.5">
                 <Sparkles className="h-3 w-3 text-accent-gold" />
-                <p className="text-[9px] font-semibold text-accent-gold uppercase tracking-wider">Oracle Tip</p>
+                <p className="text-[9px] font-semibold text-accent-gold uppercase tracking-wider">{t('oracle.oracleTip')}</p>
               </div>
               <p className="text-[11px] leading-relaxed text-text-secondary">{weekly.oracle_tip}</p>
             </div>
@@ -477,14 +480,14 @@ export default function Oracle() {
             <div className="mb-3 flex items-center gap-2">
               <BookOpen className="h-4 w-4 text-accent-blue" />
               <h3 className="font-heading text-[10px] tracking-[0.3em] text-text-muted uppercase">
-                Oracle Knowledge
+                {t('oracle.oracleKnowledge')}
               </h3>
             </div>
             <div className="space-y-2">
-              {ORACLE_TOPICS.map((topic) => (
+              {oracleTopics.map((topic) => (
                 <button
                   key={topic.label}
-                  onClick={() => handleSend(`Tell me about my ${topic.label.toLowerCase()}`)}
+                  onClick={() => handleSend(t('oracle.topicPrompt', { topic: topic.label.toLowerCase() }))}
                   disabled={isTyping}
                   className="group flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-accent-blue/5 disabled:opacity-50"
                 >
@@ -502,3 +505,9 @@ export default function Oracle() {
     </motion.div>
   )
 }
+
+
+
+
+
+

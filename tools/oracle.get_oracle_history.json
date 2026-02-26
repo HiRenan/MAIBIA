@@ -5,6 +5,7 @@
   "tool": {
     "type": "function",
     "name": "oracle.get_oracle_history",
+    "runtime_name": "oracle_get_oracle_history",
     "description": "Returns paginated Oracle chat history in chronological order.",
     "strict": true,
     "parameters": {

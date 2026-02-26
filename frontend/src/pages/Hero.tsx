@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'motion/react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import {
   Shield, Zap, Crown, ChevronRight, Trophy, Code, GitBranch, Star,
   Flame, Sparkles, ScrollText, Brain, FileText, type LucideIcon,
@@ -23,11 +24,11 @@ const item = {
   show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' as const } },
 }
 
-function getStats(profile: ProfileResponse) {
+function getStats(profile: ProfileResponse, t: (key: string, options?: Record<string, unknown>) => string) {
   return [
-    { label: 'Level', value: profile.level, display: String(profile.level), icon: Shield, accent: 'accent-gold', glow: 'rgba(240, 192, 64, 0.15)', link: '/skills' },
-    { label: 'Total XP', value: profile.xp, display: profile.xp.toLocaleString(), icon: Zap, accent: 'accent-purple', glow: 'rgba(139, 92, 246, 0.15)', link: '/quests' },
-    { label: 'Class', value: 0, display: profile.dev_class, icon: Crown, accent: 'accent-blue', glow: 'rgba(59, 130, 246, 0.15)', link: '/guild' },
+    { label: t('hero.stats.level'), value: profile.level, display: String(profile.level), icon: Shield, accent: 'accent-gold', glow: 'rgba(240, 192, 64, 0.15)', link: '/skills' },
+    { label: t('hero.stats.totalXp'), value: profile.xp, display: profile.xp.toLocaleString(), icon: Zap, accent: 'accent-purple', glow: 'rgba(139, 92, 246, 0.15)', link: '/quests' },
+    { label: t('hero.stats.class'), value: 0, display: profile.dev_class, icon: Crown, accent: 'accent-blue', glow: 'rgba(59, 130, 246, 0.15)', link: '/guild' },
   ]
 }
 
@@ -86,9 +87,14 @@ const FALLBACK_PROFILE: ProfileResponse = {
 
 export default function Hero() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const { data: profile } = useAPI(api.getProfile, FALLBACK_PROFILE)
   const { data: achievementsData } = useAPI(api.getAchievements, FALLBACK_ACHIEVEMENTS)
-  const subtitle = useTypewriter(`${profile.dev_class}  \u2022  Level ${profile.level}`, 50, 600)
+  const subtitle = useTypewriter(
+    t('hero.subtitle', { devClass: profile.dev_class, level: profile.level }),
+    50,
+    600,
+  )
 
   const badges = achievementsData.achievements
     .filter((a) => a.unlocked)
@@ -107,7 +113,7 @@ export default function Hero() {
         variants={item}
         className="mb-3 font-body text-sm tracking-[0.3em] text-text-muted uppercase"
       >
-        Welcome, Adventurer
+        {t('hero.welcome')}
       </motion.p>
 
       {/* Avatar with glowing border */}
@@ -117,7 +123,7 @@ export default function Hero() {
       >
         <div className="avatar-glow-ring relative flex h-24 w-24 items-center justify-center rounded-full sm:h-28 sm:w-28">
           <div className="flex h-20 w-20 items-center justify-center rounded-full bg-bg-secondary font-display text-2xl text-accent-gold sm:h-24 sm:w-24 sm:text-3xl">
-            RC
+            {profile.avatar_initials || '??'}
           </div>
         </div>
         {/* Pulse ring */}
@@ -135,7 +141,7 @@ export default function Hero() {
           filter: 'drop-shadow(0 0 20px rgba(240, 192, 64, 0.2))',
         }}
       >
-        Renan Carvalho
+        {profile.name}
       </motion.h1>
 
       {/* Typing subtitle */}
@@ -158,7 +164,7 @@ export default function Hero() {
 
       {/* Stat cards — clickable, with animated counters */}
       <motion.div variants={item} className="grid w-full max-w-2xl grid-cols-1 gap-4 sm:grid-cols-3">
-        {getStats(profile).map((stat) => {
+        {getStats(profile, t).map((stat) => {
           const Icon = stat.icon
           return (
             <GlassCard
@@ -214,7 +220,7 @@ export default function Hero() {
       {/* XP Bar */}
       <motion.div variants={item} className="mt-8 w-full max-w-md">
         <div className="mb-2 flex justify-between text-xs text-text-muted">
-          <span className="font-heading tracking-wider uppercase">Experience</span>
+          <span className="font-heading tracking-wider uppercase">{t('hero.experience')}</span>
           <span>
             <AnimatedCounter value={profile.xp} duration={1.4} separator="," /> / {profile.xp_next_level.toLocaleString()} XP
           </span>
@@ -242,7 +248,7 @@ export default function Hero() {
         whileTap={{ scale: 0.98 }}
         style={{ boxShadow: '0 0 20px rgba(240, 192, 64, 0.08)' }}
       >
-        Begin Your Quest
+        {t('hero.beginQuest')}
         <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
       </motion.button>
     </motion.div>

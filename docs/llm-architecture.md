@@ -14,6 +14,7 @@ Project phase: Final evaluation (Oracle + CV as MUST flows)
 5. Model selection:
    - Oracle: `gpt-4o-mini`
    - CV analysis: `gpt-4o-mini`
+   - Repo analysis: `gpt-4o-mini`
 
 ## Why This Decision
 
@@ -33,6 +34,9 @@ Project phase: Final evaluation (Oracle + CV as MUST flows)
 1. Official SDK supports structured parsing with Pydantic models.
 2. Official SDK supports function/tool calling patterns needed for deterministic backend contracts.
 3. This reduces custom parsing complexity and failure surface.
+4. Runtime decision for this phase:
+   - Oracle: real tool-calling enabled (`oracle_get_player_profile`, `oracle_get_player_skills`, `oracle_get_oracle_history`).
+   - CV/Repo: structured outputs with strict JSON schema; tools remain documented as API contracts.
 
 ### Privacy
 1. Trade-off accepted: requests leave local environment to a hosted provider.
@@ -97,6 +101,7 @@ Project phase: Final evaluation (Oracle + CV as MUST flows)
    - keep API response shape stable,
    - return graceful fallback content,
    - never break frontend flow.
+4. Public API returns standardized envelope `ok/data/meta` with predictable error codes.
 
 ## Risks and Mitigations
 1. Risk: provider rate limit or transient outage.

@@ -5,6 +5,7 @@
   "tool": {
     "type": "function",
     "name": "oracle.get_player_profile",
+    "runtime_name": "oracle_get_player_profile",
     "description": "Fetches current player profile attributes used for personalized Oracle guidance.",
     "strict": true,
     "parameters": {

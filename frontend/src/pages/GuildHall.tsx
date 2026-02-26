@@ -1,5 +1,6 @@
-import { useState, useRef, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 import {
   Upload, Wand2, Swords, Brain, Eye, Heart, FileText, Download,
   Trophy, Code, Flame, Shield, ChevronDown, Sparkles, ScrollText,
@@ -18,6 +19,7 @@ import {
 } from '../services/api'
 import { useAPI } from '../hooks/useAPI'
 import { useGamification } from '../contexts/GamificationContext'
+import i18n from '../i18n'
 
 /* ═══════════════════════════════════════════
    ANIMATION VARIANTS
@@ -45,6 +47,9 @@ const TITLE_ICONS: Record<string, typeof Flame> = {
   flame: Flame, code: Code, shield: Shield, trophy: Trophy,
   bug: Flame, star: Sparkles, scroll: ScrollText, sword: Swords,
 }
+
+const MAX_CV_SIZE_BYTES = 5 * 1024 * 1024
+const ALLOWED_CV_EXTENSIONS = new Set(['.pdf', '.doc', '.docx'])
 
 /* ═══════════════════════════════════════════
    FALLBACK DATA
@@ -180,7 +185,7 @@ function ScoreRing({ score, size = 120 }: { score: number; size?: number }) {
         >
           {score}
         </motion.span>
-        <span className="text-[9px] tracking-[0.2em] text-text-muted uppercase">CV Score</span>
+        <span className="text-[9px] tracking-[0.2em] text-text-muted uppercase">{i18n.t('guild.analysis.score')}</span>
       </div>
     </div>
   )
@@ -253,16 +258,17 @@ function RadarChart({ stats }: { stats: { name: string; value: number; color: st
 function GuildStatsBar({ profile, latestScore, skillCount, titleCount }: {
   profile: ProfileResponse; latestScore: number | null; skillCount: number; titleCount: number
 }) {
+  const { t } = useTranslation()
   const powerLevel = useMemo(() => {
     const vals = Object.values(profile.stats).map(s => s.value)
     return vals.length > 0 ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : 0
   }, [profile])
 
   const cards = [
-    { label: 'Power Level', value: powerLevel, suffix: '', color: '#f0c040', iconEl: StatIconPower },
-    { label: 'CV Score', value: latestScore ?? 0, display: latestScore != null ? undefined : '--', suffix: '', color: '#22c55e', iconEl: StatIconCV },
-    { label: 'Skills Mastered', value: skillCount, suffix: '', color: '#8b5cf6', iconEl: StatIconSkills },
-    { label: 'Titles Earned', value: titleCount, suffix: '', color: '#3b82f6', iconEl: StatIconTitles },
+    { label: t('guild.stats.powerLevel'), value: powerLevel, suffix: '', color: '#f0c040', iconEl: StatIconPower },
+    { label: t('guild.stats.cvScore'), value: latestScore ?? 0, display: latestScore != null ? undefined : '--', suffix: '', color: '#22c55e', iconEl: StatIconCV },
+    { label: t('guild.stats.skillsMastered'), value: skillCount, suffix: '', color: '#8b5cf6', iconEl: StatIconSkills },
+    { label: t('guild.stats.titlesEarned'), value: titleCount, suffix: '', color: '#3b82f6', iconEl: StatIconTitles },
   ]
 
   return (
@@ -300,7 +306,8 @@ function GuildStatsBar({ profile, latestScore, skillCount, titleCount }: {
    ═══════════════════════════════════════════ */
 function formatDate(iso: string): string {
   try {
-    return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    const locale = i18n.resolvedLanguage === 'pt-BR' ? 'pt-BR' : 'en-US'
+    return new Date(iso).toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' })
   } catch { return iso }
 }
 
@@ -308,6 +315,24 @@ function formatFileSize(bytes: number): string {
   if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
   if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB`
   return `${bytes} B`
+}
+
+function fileExtension(name: string): string {
+  const idx = name.lastIndexOf('.')
+  return idx >= 0 ? name.slice(idx).toLowerCase() : ''
+}
+
+function toCVMessage(raw: string): string {
+  const key = raw.trim().toLowerCase()
+  if (!key) return i18n.t('guild.errors.unexpected')
+  if (key.includes('unsupported_file_type')) return i18n.t('guild.errors.unsupportedFileType')
+  if (key.includes('file_too_large')) return i18n.t('guild.errors.fileTooLarge')
+  if (key.includes('empty_file')) return i18n.t('guild.errors.emptyFile')
+  if (key.includes('network')) return i18n.t('guild.errors.network')
+  if (key.includes('unable to analyze')) return i18n.t('guild.errors.unableToAnalyze')
+  if (key.includes('unable to generate')) return i18n.t('guild.errors.unableToGenerate')
+  if (key.includes('player_profile_not_found')) return i18n.t('guild.errors.profileNotFound')
+  return raw
 }
 
 function generateRPGCV(
@@ -363,6 +388,7 @@ function generateRPGCV(
    MAIN COMPONENT
    ═══════════════════════════════════════════ */
 export default function GuildHall() {
+  const { t } = useTranslation()
   const { showXPGain } = useGamification()
 
   /* ─── API data ─── */
@@ -374,11 +400,12 @@ export default function GuildHall() {
   /* ─── Local state ─── */
   const [currentFile, setCurrentFile] = useState<File | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [isDownloading, setIsDownloading] = useState(false)
   const [currentAnalysis, setCurrentAnalysis] = useState<CVAnalysisResponse | null>(null)
   const [isDragOver, setIsDragOver] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
   const [analyses, setAnalyses] = useState<CVAnalysisResponse[]>([])
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [cvStatus, setCVStatus] = useState<{ tone: 'success' | 'error'; message: string } | null>(null)
 
   /* ─── Derived data ─── */
   const allAnalyses = useMemo(() => {
@@ -413,31 +440,71 @@ export default function GuildHall() {
 
   /* ─── Handlers ─── */
   const handleFile = useCallback((file: File) => {
-    if (file.size > 5 * 1024 * 1024) return
+    const extension = fileExtension(file.name)
+    if (!ALLOWED_CV_EXTENSIONS.has(extension)) {
+      setCVStatus({ tone: 'error', message: t('guild.status.unsupportedType') })
+      return
+    }
+    if (file.size > MAX_CV_SIZE_BYTES) {
+      setCVStatus({ tone: 'error', message: t('guild.status.fileTooLarge') })
+      return
+    }
     setCurrentFile(file)
     setCurrentAnalysis(null)
-  }, [])
+    setCVStatus({ tone: 'success', message: t('guild.status.selectedFile', { name: file.name }) })
+  }, [t])
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     setIsDragOver(false)
     const file = e.dataTransfer.files[0]
-    if (file) handleFile(file)
-  }, [handleFile])
+    if (!file) {
+      setCVStatus({ tone: 'error', message: t('guild.status.noFileDropped') })
+      return
+    }
+    handleFile(file)
+  }, [handleFile, t])
 
   const handleAnalyze = useCallback(async () => {
-    if (!currentFile) return
+    if (!currentFile) {
+      setCVStatus({ tone: 'error', message: t('guild.status.selectFileBeforeAnalyze') })
+      return
+    }
+    setCVStatus(null)
     setIsAnalyzing(true)
     const result = await api.uploadCV(currentFile)
     setIsAnalyzing(false)
-    if (result) {
-      setCurrentAnalysis(result)
-      setAnalyses(prev => [result, ...prev])
-      if (result.gamification) showXPGain(result.gamification)
+    if (!result.ok) {
+      setCVStatus({ tone: 'error', message: toCVMessage(result.message) })
+      return
     }
-  }, [currentFile, showXPGain])
 
-  const handleDownload = useCallback(() => {
+    const analysis = result.data
+    setCurrentAnalysis(analysis)
+    setAnalyses(prev => [analysis, ...prev])
+    setCVStatus({ tone: 'success', message: t('guild.status.analyzedSuccess') })
+    if (analysis.gamification) showXPGain(analysis.gamification)
+  }, [currentFile, showXPGain, t])
+
+  const handleDownload = useCallback(async () => {
+    setCVStatus(null)
+    setIsDownloading(true)
+    const result = await api.downloadRPGCV()
+    setIsDownloading(false)
+
+    if (result.ok) {
+      const url = URL.createObjectURL(result.blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = result.filename
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      setCVStatus({ tone: 'success', message: `Downloaded PDF: ${result.filename}` })
+      return
+    }
+
     const text = generateRPGCV(profile, skillsData, achievementsData)
     const blob = new Blob([text], { type: 'text/plain;charset=utf-8' })
     const url = URL.createObjectURL(blob)
@@ -448,13 +515,17 @@ export default function GuildHall() {
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
+    setCVStatus({
+      tone: 'error',
+      message: `${toCVMessage(result.message)} Downloaded TXT fallback instead.`,
+    })
   }, [profile, skillsData, achievementsData])
 
   return (
     <motion.div variants={container} initial="hidden" animate="show">
       <PageHeader
-        title="Guild Hall"
-        subtitle="Your character sheet and credentials"
+        title={t('guild.title')}
+        subtitle={t('guild.subtitle')}
         gradient="linear-gradient(135deg, #22c55e, #4ade80, #16a34a)"
         glowColor="rgba(34, 197, 94, 0.2)"
       />
@@ -489,7 +560,7 @@ export default function GuildHall() {
             {/* XP Bar */}
             <div className="mb-5">
               <div className="mb-1 flex items-center justify-between">
-                <span className="text-[10px] tracking-wider text-text-muted uppercase">Experience</span>
+                <span className="text-[10px] tracking-wider text-text-muted uppercase">{t('guild.experience')}</span>
                 <span className="text-[10px] text-text-muted">
                   {profile.xp.toLocaleString()} / {profile.xp_next_level.toLocaleString()} XP
                 </span>
@@ -544,7 +615,7 @@ export default function GuildHall() {
           {/* Earned Titles */}
           <motion.div variants={item}>
             <p className="mb-3 font-heading text-[10px] tracking-[0.3em] text-text-muted uppercase">
-              Earned Titles
+              {t('guild.earnedTitles')}
             </p>
             <div className="flex flex-wrap gap-2">
               {unlockedTitles.map((title, i) => {
@@ -570,7 +641,7 @@ export default function GuildHall() {
                 )
               })}
               {unlockedTitles.length === 0 && (
-                <p className="text-[10px] text-text-muted italic">No titles earned yet</p>
+                <p className="text-[10px] text-text-muted italic">{t('guild.noTitles')}</p>
               )}
             </div>
           </motion.div>
@@ -578,7 +649,7 @@ export default function GuildHall() {
           {/* Equipment Slots */}
           <motion.div variants={item}>
             <p className="mb-3 font-heading text-[10px] tracking-[0.3em] text-text-muted uppercase">
-              Equipment Slots
+              {t('guild.equipmentSlots')}
             </p>
             <div className="space-y-3">
               {skillsData.branches.map((branch) => (
@@ -609,7 +680,7 @@ export default function GuildHall() {
           {/* Upload Zone */}
           <motion.div
             variants={item}
-            className={`group cursor-pointer rounded-xl border-2 border-dashed p-8 text-center transition-all duration-200 ${
+            className={`relative overflow-hidden group cursor-pointer rounded-xl border-2 border-dashed p-8 text-center transition-all duration-200 ${
               isDragOver
                 ? 'border-accent-green/50 bg-accent-green/10'
                 : currentFile
@@ -619,16 +690,19 @@ export default function GuildHall() {
             onDragOver={(e) => { e.preventDefault(); setIsDragOver(true) }}
             onDragLeave={() => setIsDragOver(false)}
             onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
           >
             <input
-              ref={fileInputRef}
               type="file"
               accept=".pdf,.doc,.docx"
-              className="hidden"
+              className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
+              aria-label={t('guild.upload.ariaLabel')}
+              onDragOver={(e) => { e.preventDefault(); setIsDragOver(true) }}
+              onDragLeave={() => setIsDragOver(false)}
+              onDrop={handleDrop}
               onChange={(e) => {
-                const file = e.target.files?.[0]
+                const file = e.currentTarget.files?.[0]
                 if (file) handleFile(file)
+                e.currentTarget.value = ''
               }}
             />
 
@@ -636,7 +710,7 @@ export default function GuildHall() {
               <div className="flex flex-col items-center gap-2">
                 <FileText className="h-8 w-8 text-accent-green" />
                 <p className="font-heading text-sm tracking-wide text-accent-green">{currentFile.name}</p>
-                <p className="text-[10px] text-text-muted">{formatFileSize(currentFile.size)} &bull; Click to change</p>
+                <p className="text-[10px] text-text-muted">{formatFileSize(currentFile.size)} &bull; {t('guild.upload.clickToChange')}</p>
               </div>
             ) : (
               <>
@@ -644,9 +718,9 @@ export default function GuildHall() {
                   <Upload className="h-5 w-5 text-accent-green" />
                 </div>
                 <p className="font-heading text-sm tracking-wide text-text-secondary">
-                  Drop your CV scroll here
+                  {t('guild.upload.drop')}
                 </p>
-                <p className="mt-1 text-[10px] text-text-muted">PDF, DOC up to 5MB</p>
+                <p className="mt-1 text-[10px] text-text-muted">{t('guild.upload.hint')}</p>
               </>
             )}
           </motion.div>
@@ -667,15 +741,28 @@ export default function GuildHall() {
                   animate={{ rotate: 360 }}
                   transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
                 />
-                Analyzing Scroll...
+                {t('guild.analyze.analyzing')}
               </>
             ) : (
               <>
                 <Wand2 className="h-4 w-4" />
-                Analyze Character Sheet
+                {t('guild.analyze.button')}
               </>
             )}
           </motion.button>
+
+          {cvStatus && (
+            <motion.div
+              variants={item}
+              className={`rounded-lg border px-3 py-2 text-xs ${
+                cvStatus.tone === 'success'
+                  ? 'border-accent-green/30 bg-accent-green/10 text-accent-green'
+                  : 'border-accent-red/30 bg-accent-red/10 text-accent-red'
+              }`}
+            >
+              {cvStatus.message}
+            </motion.div>
+          )}
 
           {/* Analysis Panel */}
           <AnimatePresence>
@@ -690,7 +777,7 @@ export default function GuildHall() {
                   <div className="mb-4 flex items-center gap-2">
                     <Wand2 className="h-4 w-4 text-accent-purple" />
                     <span className="font-heading text-xs tracking-wider text-accent-purple uppercase">
-                      CV Analysis Results
+                      {t('guild.analysis.results')}
                     </span>
                   </div>
 
@@ -701,7 +788,7 @@ export default function GuildHall() {
 
                   {/* Section Breakdown */}
                   <div className="mb-5 space-y-3">
-                    <p className="text-[10px] tracking-wider text-text-muted uppercase">Section Breakdown</p>
+                    <p className="text-[10px] tracking-wider text-text-muted uppercase">{t('guild.analysis.sectionBreakdown')}</p>
                     {currentAnalysis.sections.map((section, i) => {
                       const barColor = section.score >= 85 ? '#22c55e' : section.score >= 70 ? '#3b82f6' : '#f0c040'
                       return (
@@ -735,7 +822,7 @@ export default function GuildHall() {
                     <div className="mb-4">
                       <div className="mb-2 flex items-center gap-1.5">
                         <CheckCircle className="h-3.5 w-3.5 text-green-400" />
-                        <span className="text-[10px] tracking-wider text-green-400 uppercase">Strengths</span>
+                        <span className="text-[10px] tracking-wider text-green-400 uppercase">{t('guild.analysis.strengths')}</span>
                       </div>
                       <div className="flex flex-wrap gap-1.5">
                         {currentAnalysis.strengths.map((s, i) => (
@@ -758,7 +845,7 @@ export default function GuildHall() {
                     <div className="mb-4">
                       <div className="mb-2 flex items-center gap-1.5">
                         <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
-                        <span className="text-[10px] tracking-wider text-amber-400 uppercase">Weaknesses</span>
+                        <span className="text-[10px] tracking-wider text-amber-400 uppercase">{t('guild.analysis.weaknesses')}</span>
                       </div>
                       <div className="flex flex-wrap gap-1.5">
                         {currentAnalysis.weaknesses.map((w, i) => (
@@ -781,7 +868,7 @@ export default function GuildHall() {
                     <div>
                       <div className="mb-2 flex items-center gap-1.5">
                         <Lightbulb className="h-3.5 w-3.5 text-accent-gold" />
-                        <span className="text-[10px] tracking-wider text-accent-gold uppercase">Pro Tips</span>
+                        <span className="text-[10px] tracking-wider text-accent-gold uppercase">{t('guild.analysis.proTips')}</span>
                       </div>
                       <div className="space-y-1.5">
                         {currentAnalysis.tips.map((tip, i) => (
@@ -812,7 +899,7 @@ export default function GuildHall() {
                 className="mb-2 flex w-full items-center justify-between text-left"
               >
                 <p className="font-heading text-[10px] tracking-[0.3em] text-text-muted uppercase">
-                  Analysis History ({allAnalyses.length})
+                  {t('guild.analysis.history', { count: allAnalyses.length })}
                 </p>
                 <motion.div
                   animate={{ rotate: showHistory ? 180 : 0 }}
@@ -860,12 +947,26 @@ export default function GuildHall() {
           <motion.button
             variants={item}
             onClick={handleDownload}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-border-subtle/30 bg-bg-card/20 px-6 py-3 font-heading text-xs tracking-widest text-text-muted uppercase transition-all hover:border-accent-gold/30 hover:text-accent-gold"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+            disabled={isDownloading}
+            className="relative z-20 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-border-subtle/30 bg-bg-card/20 px-6 py-3 font-heading text-xs tracking-widest text-text-muted uppercase transition-all hover:border-accent-gold/30 hover:text-accent-gold disabled:cursor-not-allowed disabled:opacity-40"
+            whileHover={!isDownloading ? { scale: 1.02 } : undefined}
+            whileTap={!isDownloading ? { scale: 0.98 } : undefined}
           >
-            <Download className="h-4 w-4" />
-            Download RPG CV
+            {isDownloading ? (
+              <>
+                <motion.div
+                  className="h-4 w-4 rounded-full border-2 border-accent-gold/30 border-t-accent-gold"
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
+                />
+                {t('guild.download.generating')}
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4" />
+                {t('guild.download.button')}
+              </>
+            )}
           </motion.button>
         </div>
       </div>

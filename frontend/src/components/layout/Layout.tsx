@@ -1,6 +1,7 @@
 import { Suspense, lazy, useState, useEffect, useCallback } from 'react'
 import { useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 import { useTheme } from '../../contexts/ThemeContext'
 import Navbar from './Navbar'
 
@@ -11,6 +12,7 @@ const ParticleBackground = lazy(() => import('../3d/ParticleBackground'))
 export default function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation()
   const { isDark } = useTheme()
+  const { t } = useTranslation()
   const [konamiActive, setKonamiActive] = useState(false)
   const [konamiIdx, setKonamiIdx] = useState(0)
 
@@ -83,7 +85,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           >
             <div className="absolute top-4 left-1/2 -translate-x-1/2 rounded-lg border border-accent-gold/30 bg-bg-card/80 px-4 py-2 backdrop-blur-sm">
               <p className="font-heading text-sm text-accent-gold animate-[gold-pulse_2s_ease-in-out_infinite]">
-                Legendary Mode Activated!
+                {t('layout.legendaryModeActivated')}
               </p>
             </div>
           </motion.div>

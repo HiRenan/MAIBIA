@@ -1,10 +1,8 @@
-import { useRef, useState, useMemo, useCallback } from 'react'
+import { useRef, useState, useMemo } from 'react'
 import { motion, useInView, AnimatePresence } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 import {
-  Plus,
   Pin,
-  Edit3,
-  Trash2,
   ExternalLink,
   Calendar,
   Tag,
@@ -17,10 +15,8 @@ import {
 import PageHeader from '../components/ui/PageHeader'
 import GlassCard from '../components/ui/GlassCard'
 import AnimatedCounter from '../components/ui/AnimatedCounter'
-import Modal from '../components/ui/Modal'
-import { api, type BlogPostData, type BlogPostCreate } from '../services/api'
+import { api, type BlogPostData } from '../services/api'
 import { useAPI } from '../hooks/useAPI'
-import { useGamification } from '../contexts/GamificationContext'
 import { SOCIAL_LINKS, type SocialLinkName } from '../config/socialLinks'
 
 // ─── Fallback Data ──────────────────────────────────────────────────────
@@ -179,19 +175,23 @@ function IconLatest({ color = '#22c55e' }: { color?: string }) {
 function TavernStatsBar({ posts }: { posts: BlogPostData[] }) {
   const ref = useRef<HTMLDivElement>(null)
   const isInView = useInView(ref, { once: true })
+  const { t, i18n } = useTranslation()
 
   const totalPosts = posts.length
   const pinnedCount = posts.filter((p) => p.pinned).length
   const categories = new Set(posts.map((p) => p.category)).size
   const latestDate = posts.length > 0
-    ? new Date(posts.reduce((a, b) => a.created_at > b.created_at ? a : b).created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+    ? new Date(posts.reduce((a, b) => a.created_at > b.created_at ? a : b).created_at).toLocaleDateString(
+      i18n.resolvedLanguage === 'pt-BR' ? 'pt-BR' : 'en-US',
+      { month: 'short', year: 'numeric' },
+    )
     : 'N/A'
 
   const stats = [
-    { label: 'Total Posts', value: totalPosts, suffix: '', color: '#f0c040', IconComp: IconPosts },
-    { label: 'Pinned', value: pinnedCount, suffix: '', color: '#8b5cf6', IconComp: IconPinned },
-    { label: 'Categories', value: categories, suffix: '', color: '#3b82f6', IconComp: IconCategories },
-    { label: 'Latest', value: 0, suffix: '', color: '#22c55e', IconComp: IconLatest, text: latestDate },
+    { label: t('tavern.stats.totalPosts'), value: totalPosts, suffix: '', color: '#f0c040', IconComp: IconPosts },
+    { label: t('tavern.stats.pinned'), value: pinnedCount, suffix: '', color: '#8b5cf6', IconComp: IconPinned },
+    { label: t('tavern.stats.categories'), value: categories, suffix: '', color: '#3b82f6', IconComp: IconCategories },
+    { label: t('tavern.stats.latest'), value: 0, suffix: '', color: '#22c55e', IconComp: IconLatest, text: latestDate },
   ]
 
   return (
@@ -250,6 +250,15 @@ function CategoryFilters({
   active: CategoryKey
   onChange: (key: CategoryKey) => void
 }) {
+  const { t } = useTranslation()
+  const labelKeys: Record<CategoryKey, string> = {
+    all: 'tavern.filters.all',
+    update: 'tavern.filters.updates',
+    project: 'tavern.filters.projects',
+    achievement: 'tavern.filters.achievements',
+    thought: 'tavern.filters.thoughts',
+  }
+
   return (
     <motion.div variants={itemVariants} className="mb-6 flex flex-wrap gap-2">
       {CATEGORIES.map((cat) => {
@@ -267,7 +276,7 @@ function CategoryFilters({
             }}
           >
             <Icon className="h-3 w-3" />
-            {cat.label}
+            {t(labelKeys[cat.key])}
             {isActive && (
               <motion.div
                 layoutId="tavern-filter-active"
@@ -287,13 +296,10 @@ function CategoryFilters({
 
 function PostCard({
   post,
-  onEdit,
-  onDelete,
 }: {
   post: BlogPostData
-  onEdit: (post: BlogPostData) => void
-  onDelete: (post: BlogPostData) => void
 }) {
+  const { t } = useTranslation()
   const ref = useRef<HTMLDivElement>(null)
   const isInView = useInView(ref, { once: true, margin: '-40px' })
   const [expanded, setExpanded] = useState(false)
@@ -329,7 +335,7 @@ function PostCard({
           {post.pinned && (
             <span className="flex items-center gap-1 text-[10px] font-semibold tracking-wider text-accent-gold uppercase">
               <Pin className="h-3 w-3" />
-              Pinned
+              {t('tavern.stats.pinned')}
             </span>
           )}
           <span
@@ -365,7 +371,7 @@ function PostCard({
             onClick={() => setExpanded(true)}
             className="mt-1 text-[11px] font-medium text-accent-purple hover:text-accent-purple/80"
           >
-            Read more...
+            {t('tavern.readMore')}
           </button>
         )}
 
@@ -389,31 +395,16 @@ function PostCard({
           </div>
         )}
 
-        {/* Actions */}
-        <div className="mt-4 flex items-center gap-2 border-t border-border-subtle/30 pt-3">
-          <button
-            onClick={() => onEdit(post)}
-            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] text-text-muted transition-colors hover:bg-accent-purple/10 hover:text-accent-purple"
-          >
-            <Edit3 className="h-3 w-3" />
-            Edit
-          </button>
-          <button
-            onClick={() => onDelete(post)}
-            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] text-text-muted transition-colors hover:bg-red-500/10 hover:text-red-400"
-          >
-            <Trash2 className="h-3 w-3" />
-            Delete
-          </button>
-          {expanded && (
+        {expanded && (
+          <div className="mt-4 flex items-center border-t border-border-subtle/30 pt-3">
             <button
               onClick={() => setExpanded(false)}
               className="ml-auto text-[11px] text-text-muted hover:text-text-secondary"
             >
-              Collapse
+              {t('tavern.collapse')}
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </GlassCard>
     </motion.div>
   )
@@ -422,6 +413,7 @@ function PostCard({
 // ─── Social Links Panel ─────────────────────────────────────────────────
 
 function SocialLinksPanel() {
+  const { t } = useTranslation()
   const ref = useRef<HTMLDivElement>(null)
   const isInView = useInView(ref, { once: true, margin: '-30px' })
 
@@ -433,17 +425,18 @@ function SocialLinksPanel() {
       transition={{ duration: 0.5 }}
     >
       <p className="mb-4 font-heading text-xs tracking-wider text-text-muted uppercase">
-        Social Links
+        {t('tavern.socialLinks')}
       </p>
-      <div className="space-y-2">
+      <div className="relative z-20 space-y-2">
         {SOCIAL_LINKS.map((link) => (
           <a
             key={link.name}
             href={link.url}
-            aria-label={link.ariaLabel}
+            aria-label={t(link.ariaLabelKey)}
             target="_blank"
             rel="noopener noreferrer"
-            className="group flex items-center gap-3 rounded-lg border border-border-subtle/30 bg-bg-card/20 px-4 py-3 transition-all duration-200 hover:border-border-subtle/50 hover:bg-bg-card/40"
+            className="relative z-30 pointer-events-auto group flex items-center gap-3 rounded-lg border border-border-subtle/30 bg-bg-card/20 px-4 py-3 transition-all duration-200 hover:border-border-subtle/50 hover:bg-bg-card/40"
+            onClick={(e) => e.stopPropagation()}
           >
             <div
               className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors duration-200"
@@ -453,7 +446,7 @@ function SocialLinksPanel() {
             </div>
             <div className="flex-1">
               <p className="text-sm font-medium text-text-primary">{link.name}</p>
-              <p className="text-[10px] text-text-muted">View profile</p>
+              <p className="text-[10px] text-text-muted">{t('tavern.viewProfile')}</p>
             </div>
             <ExternalLink className="h-3.5 w-3.5 text-text-muted transition-colors group-hover:text-text-secondary" />
           </a>
@@ -466,6 +459,7 @@ function SocialLinksPanel() {
 // ─── Tag Cloud ──────────────────────────────────────────────────────────
 
 function TagCloud({ posts }: { posts: BlogPostData[] }) {
+  const { t } = useTranslation()
   const ref = useRef<HTMLDivElement>(null)
   const isInView = useInView(ref, { once: true, margin: '-30px' })
 
@@ -493,7 +487,7 @@ function TagCloud({ posts }: { posts: BlogPostData[] }) {
       transition={{ duration: 0.5 }}
     >
       <p className="mb-4 font-heading text-xs tracking-wider text-text-muted uppercase">
-        Tag Cloud
+        {t('tavern.tagCloud')}
       </p>
       <div className="flex flex-wrap gap-2">
         {allTags.map(([tag, count], i) => {
@@ -520,6 +514,7 @@ function TagCloud({ posts }: { posts: BlogPostData[] }) {
 // ─── Pinned Post Highlight ──────────────────────────────────────────────
 
 function PinnedHighlight({ post }: { post: BlogPostData | undefined }) {
+  const { t } = useTranslation()
   const ref = useRef<HTMLDivElement>(null)
   const isInView = useInView(ref, { once: true, margin: '-30px' })
 
@@ -533,7 +528,7 @@ function PinnedHighlight({ post }: { post: BlogPostData | undefined }) {
       transition={{ duration: 0.5 }}
     >
       <p className="mb-4 font-heading text-xs tracking-wider text-text-muted uppercase">
-        Featured Scroll
+        {t('tavern.featuredScroll')}
       </p>
       <GlassCard
         accentColor={`${post.color}40`}
@@ -563,237 +558,17 @@ function PinnedHighlight({ post }: { post: BlogPostData | undefined }) {
   )
 }
 
-// ─── Create/Edit Modal ──────────────────────────────────────────────────
-
-function PostFormModal({
-  open,
-  onClose,
-  onSave,
-  initialData,
-}: {
-  open: boolean
-  onClose: () => void
-  onSave: (data: BlogPostCreate) => void
-  initialData?: BlogPostData | null
-}) {
-  const [title, setTitle] = useState(initialData?.title ?? '')
-  const [content, setContent] = useState(initialData?.content ?? '')
-  const [category, setCategory] = useState(initialData?.category ?? 'update')
-  const [tags, setTags] = useState(initialData?.tags ?? '')
-  const [pinned, setPinned] = useState(initialData?.pinned ?? false)
-  const [showPreview, setShowPreview] = useState(false)
-
-  const handleSubmit = () => {
-    if (!title.trim() || !content.trim()) return
-    onSave({
-      title: title.trim(),
-      content: content.trim(),
-      category,
-      tags: tags.trim(),
-      color: CATEGORY_COLORS[category] || '#8b5cf6',
-      pinned,
-    })
-  }
-
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title={initialData ? 'Edit Post' : 'New Post'}
-      accentColor={CATEGORY_COLORS[category] || '#8b5cf6'}
-    >
-      <div className="space-y-4">
-        {/* Title */}
-        <div>
-          <label className="mb-1 block text-[11px] font-medium tracking-wider text-text-muted uppercase">
-            Title
-          </label>
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Your post title..."
-            className="w-full rounded-lg border border-border-subtle/40 bg-bg-primary/60 px-3 py-2 text-sm text-text-primary placeholder-text-muted/50 outline-none transition-colors focus:border-accent-purple/50"
-          />
-        </div>
-
-        {/* Content */}
-        <div>
-          <div className="mb-1 flex items-center justify-between">
-            <label className="text-[11px] font-medium tracking-wider text-text-muted uppercase">
-              Content (Markdown)
-            </label>
-            <button
-              onClick={() => setShowPreview(!showPreview)}
-              className="text-[10px] text-accent-purple hover:text-accent-purple/80"
-            >
-              {showPreview ? 'Edit' : 'Preview'}
-            </button>
-          </div>
-          {showPreview ? (
-            <div
-              className="min-h-[160px] rounded-lg border border-border-subtle/40 bg-bg-primary/60 p-3 text-xs leading-relaxed text-text-secondary"
-              dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }}
-            />
-          ) : (
-            <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Write your post in markdown..."
-              rows={8}
-              className="w-full resize-y rounded-lg border border-border-subtle/40 bg-bg-primary/60 px-3 py-2 text-sm text-text-primary placeholder-text-muted/50 outline-none transition-colors focus:border-accent-purple/50"
-            />
-          )}
-        </div>
-
-        {/* Category */}
-        <div>
-          <label className="mb-1 block text-[11px] font-medium tracking-wider text-text-muted uppercase">
-            Category
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {(['update', 'project', 'achievement', 'thought'] as const).map((cat) => {
-              const color = CATEGORY_COLORS[cat]
-              const isSelected = category === cat
-              return (
-                <button
-                  key={cat}
-                  onClick={() => setCategory(cat)}
-                  className="rounded-full border px-3 py-1 text-xs font-medium capitalize transition-all"
-                  style={{
-                    borderColor: isSelected ? `${color}60` : 'var(--color-surface-dim)',
-                    backgroundColor: isSelected ? `${color}15` : 'transparent',
-                    color: isSelected ? color : '#94a3b8',
-                  }}
-                >
-                  {cat}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Tags */}
-        <div>
-          <label className="mb-1 block text-[11px] font-medium tracking-wider text-text-muted uppercase">
-            Tags (comma-separated)
-          </label>
-          <input
-            type="text"
-            value={tags}
-            onChange={(e) => setTags(e.target.value)}
-            placeholder="react, typescript, ai..."
-            className="w-full rounded-lg border border-border-subtle/40 bg-bg-primary/60 px-3 py-2 text-sm text-text-primary placeholder-text-muted/50 outline-none transition-colors focus:border-accent-purple/50"
-          />
-        </div>
-
-        {/* Pinned toggle */}
-        <label className="flex cursor-pointer items-center gap-3">
-          <div
-            className={`relative h-5 w-9 rounded-full transition-colors ${pinned ? 'bg-accent-gold/40' : 'bg-bg-primary'}`}
-            onClick={() => setPinned(!pinned)}
-          >
-            <div
-              className={`absolute top-0.5 h-4 w-4 rounded-full transition-all ${
-                pinned ? 'left-[18px] bg-accent-gold' : 'left-0.5 bg-text-muted/40'
-              }`}
-            />
-          </div>
-          <span className="text-xs text-text-secondary">Pin this post</span>
-        </label>
-
-        {/* Actions */}
-        <div className="flex justify-end gap-3 pt-2">
-          <button
-            onClick={onClose}
-            className="rounded-lg border border-border-subtle/40 px-4 py-2 text-xs text-text-muted transition-colors hover:bg-bg-card"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={!title.trim() || !content.trim()}
-            className="rounded-lg px-4 py-2 text-xs font-medium text-white transition-all disabled:opacity-40"
-            style={{
-              background: `linear-gradient(135deg, ${CATEGORY_COLORS[category] || '#8b5cf6'}, ${CATEGORY_COLORS[category] || '#8b5cf6'}cc)`,
-            }}
-          >
-            {initialData ? 'Save Changes' : 'Publish Post'}
-          </button>
-        </div>
-      </div>
-    </Modal>
-  )
-}
-
-// ─── Delete Confirmation Modal ──────────────────────────────────────────
-
-function DeleteConfirmModal({
-  post,
-  onClose,
-  onConfirm,
-}: {
-  post: BlogPostData | null
-  onClose: () => void
-  onConfirm: () => void
-}) {
-  return (
-    <Modal
-      open={!!post}
-      onClose={onClose}
-      title="Delete Post"
-      accentColor="#ef4444"
-    >
-      <p className="mb-2 text-sm text-text-secondary">
-        Are you sure you want to delete this post?
-      </p>
-      {post && (
-        <p className="mb-6 rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2 font-heading text-sm text-text-primary">
-          {post.title}
-        </p>
-      )}
-      <div className="flex justify-end gap-3">
-        <button
-          onClick={onClose}
-          className="rounded-lg border border-border-subtle/40 px-4 py-2 text-xs text-text-muted transition-colors hover:bg-bg-card"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={onConfirm}
-          className="rounded-lg bg-red-500/80 px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-red-500"
-        >
-          Delete
-        </button>
-      </div>
-    </Modal>
-  )
-}
-
 // ─── Main TavernBoard Page ──────────────────────────────────────────────
 
 export default function TavernBoard() {
-  const { showXPGain } = useGamification()
+  const { t } = useTranslation()
   const { data, loading } = useAPI(
     () => api.getBlogPosts(),
     { posts: FALLBACK_POSTS, total: FALLBACK_POSTS.length }
   )
 
-  const [additions, setAdditions] = useState<BlogPostData[]>([])
-  const [deletedIds, setDeletedIds] = useState<number[]>([])
-  const [edits, setEdits] = useState<Record<number, BlogPostData>>({})
   const [activeCategory, setActiveCategory] = useState<CategoryKey>('all')
-  const [createModalOpen, setCreateModalOpen] = useState(false)
-  const [editingPost, setEditingPost] = useState<BlogPostData | null>(null)
-  const [deletingPost, setDeletingPost] = useState<BlogPostData | null>(null)
-
-  // Derive posts from API data + local mutations (no setState in effects)
-  const posts = useMemo(() => {
-    const base = data.posts
-      .filter((p) => !deletedIds.includes(p.id))
-      .map((p) => edits[p.id] || p)
-    return [...additions, ...base]
-  }, [data.posts, additions, deletedIds, edits])
+  const posts = data.posts
 
   const filteredPosts = useMemo(() => {
     let result = posts
@@ -808,55 +583,11 @@ export default function TavernBoard() {
 
   const pinnedPost = useMemo(() => posts.find((p) => p.pinned), [posts])
 
-  const handleCreate = useCallback(async (formData: BlogPostCreate) => {
-    const result = await api.createBlogPost(formData)
-    const newPost: BlogPostData = result ?? {
-      id: Date.now(),
-      title: formData.title,
-      content: formData.content,
-      category: (formData.category || 'update') as BlogPostData['category'],
-      tags: formData.tags || '',
-      color: formData.color || '#8b5cf6',
-      pinned: formData.pinned || false,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }
-    setAdditions((prev) => [newPost, ...prev])
-    setCreateModalOpen(false)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const gamification = (result as any)?.gamification
-    if (gamification) showXPGain(gamification)
-  }, [showXPGain])
-
-  const handleEdit = useCallback(async (formData: BlogPostCreate) => {
-    if (!editingPost) return
-    const result = await api.updateBlogPost(editingPost.id, formData)
-    const updated: BlogPostData = result ?? {
-      ...editingPost,
-      ...formData,
-      category: (formData.category || editingPost.category) as BlogPostData['category'],
-      color: formData.color || editingPost.color,
-      updated_at: new Date().toISOString(),
-    }
-    // Update in edits map or in additions list
-    setEdits((prev) => ({ ...prev, [editingPost.id]: updated }))
-    setAdditions((prev) => prev.map((p) => (p.id === editingPost.id ? updated : p)))
-    setEditingPost(null)
-  }, [editingPost])
-
-  const handleDelete = useCallback(async () => {
-    if (!deletingPost) return
-    await api.deleteBlogPost(deletingPost.id)
-    setDeletedIds((prev) => [...prev, deletingPost.id])
-    setAdditions((prev) => prev.filter((p) => p.id !== deletingPost.id))
-    setDeletingPost(null)
-  }, [deletingPost])
-
   return (
     <motion.div variants={containerVariants} initial="hidden" animate="show">
       <PageHeader
-        title="Tavern Board"
-        subtitle="Pin your stories, share your journey"
+        title={t('tavern.title')}
+        subtitle={t('tavern.subtitle')}
         gradient="linear-gradient(135deg, #8b5cf6, #a78bfa, #c4b5fd)"
         glowColor="rgba(139, 92, 246, 0.2)"
       />
@@ -864,16 +595,9 @@ export default function TavernBoard() {
       {/* Stats Bar */}
       <TavernStatsBar posts={posts} />
 
-      {/* Category Filters + New Post button */}
+      {/* Category Filters */}
       <motion.div variants={itemVariants} className="mb-6 flex flex-wrap items-center gap-3">
         <CategoryFilters active={activeCategory} onChange={setActiveCategory} />
-        <button
-          onClick={() => setCreateModalOpen(true)}
-          className="ml-auto flex items-center gap-2 rounded-lg border border-accent-purple/40 bg-accent-purple/10 px-4 py-2 text-xs font-medium text-accent-purple transition-all hover:bg-accent-purple/20"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          New Post
-        </button>
       </motion.div>
 
       {/* Main Grid */}
@@ -883,7 +607,7 @@ export default function TavernBoard() {
           {loading && posts.length === 0 && (
             <div className="py-16 text-center">
               <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-2 border-accent-purple/30 border-t-accent-purple" />
-              <p className="text-sm text-text-muted">Loading posts...</p>
+              <p className="text-sm text-text-muted">{t('tavern.loadingPosts')}</p>
             </div>
           )}
 
@@ -892,8 +616,6 @@ export default function TavernBoard() {
               <PostCard
                 key={post.id}
                 post={post}
-                onEdit={setEditingPost}
-                onDelete={setDeletingPost}
               />
             ))}
           </AnimatePresence>
@@ -905,50 +627,19 @@ export default function TavernBoard() {
               className="py-16 text-center"
             >
               <FileText className="mx-auto mb-3 h-10 w-10 text-text-muted/30" />
-              <p className="text-sm text-text-muted">No posts in this category yet.</p>
-              <button
-                onClick={() => setCreateModalOpen(true)}
-                className="mt-3 text-xs text-accent-purple hover:text-accent-purple/80"
-              >
-                Write the first one
-              </button>
+              <p className="text-sm text-text-muted">{t('tavern.noPostsCategory')}</p>
             </motion.div>
           )}
         </div>
 
         {/* Sidebar */}
-        <div className="space-y-8 md:col-span-1 lg:col-span-2">
+        <div className="relative z-20 space-y-8 md:col-span-1 lg:col-span-2">
           <SocialLinksPanel />
           <TagCloud posts={posts} />
           <PinnedHighlight post={pinnedPost} />
         </div>
       </div>
 
-      {/* Modals */}
-      {createModalOpen && (
-        <PostFormModal
-          key="create-modal"
-          open={createModalOpen}
-          onClose={() => setCreateModalOpen(false)}
-          onSave={handleCreate}
-        />
-      )}
-
-      {editingPost && (
-        <PostFormModal
-          key={`edit-${editingPost.id}`}
-          open={true}
-          onClose={() => setEditingPost(null)}
-          onSave={handleEdit}
-          initialData={editingPost}
-        />
-      )}
-
-      <DeleteConfirmModal
-        post={deletingPost}
-        onClose={() => setDeletingPost(null)}
-        onConfirm={handleDelete}
-      />
     </motion.div>
   )
 }

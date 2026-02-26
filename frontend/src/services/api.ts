@@ -5,17 +5,95 @@
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
+interface ApiMeta {
+  request_id?: string
+  flow?: string
+  source?: string
+  reason?: string
+  timestamp?: string
+}
+
+interface ApiSuccessEnvelope<T> {
+  ok: true
+  data: T
+  meta: ApiMeta
+}
+
+interface ApiErrorEnvelope {
+  ok: false
+  error: {
+    code: string
+    message: string
+    retryable: boolean
+    details: Record<string, unknown>
+  }
+  meta: ApiMeta
+}
+
+type ApiEnvelope<T> = ApiSuccessEnvelope<T> | ApiErrorEnvelope
+
+function isApiEnvelope(payload: unknown): payload is ApiEnvelope<unknown> {
+  if (!payload || typeof payload !== 'object') return false
+  return 'ok' in payload
+}
+
 async function fetchAPI<T>(path: string, options?: RequestInit): Promise<T | null> {
   try {
     const resp = await fetch(`${API_BASE}${path}`, {
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       ...options,
     })
     if (!resp.ok) return null
-    return resp.json()
+    const payload: unknown = await resp.json()
+    if (isApiEnvelope(payload)) {
+      if (!payload.ok) return null
+      return payload.data as T
+    }
+    return payload as T
   } catch {
     return null
   }
+}
+
+async function readErrorMessage(response: Response, fallback: string): Promise<string> {
+  try {
+    const payload = (await response.json()) as {
+      detail?: unknown
+      message?: unknown
+      error?: unknown
+      ok?: unknown
+    }
+    if (payload.ok === false && typeof payload.error === 'object' && payload.error) {
+      const envError = payload.error as { message?: unknown }
+      if (typeof envError.message === 'string' && envError.message.trim()) return envError.message
+    }
+    if (typeof payload.message === 'string' && payload.message.trim()) return payload.message
+    if (typeof payload.error === 'string' && payload.error.trim()) return payload.error
+    if (typeof payload.detail === 'string' && payload.detail.trim()) return payload.detail
+    if (Array.isArray(payload.detail) && payload.detail.length > 0) {
+      const first = payload.detail[0] as { msg?: unknown }
+      if (typeof first?.msg === 'string' && first.msg.trim()) return first.msg
+    }
+  } catch {
+    // Ignore body parse errors and fallback to default message.
+  }
+  return fallback
+}
+
+function extractFilename(contentDisposition: string | null, fallback: string): string {
+  if (!contentDisposition) return fallback
+  const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i)
+  if (utf8Match?.[1]) {
+    try {
+      return decodeURIComponent(utf8Match[1].replace(/"/g, '').trim())
+    } catch {
+      return utf8Match[1].replace(/"/g, '').trim()
+    }
+  }
+  const simpleMatch = contentDisposition.match(/filename="?([^";]+)"?/i)
+  if (simpleMatch?.[1]) return simpleMatch[1].trim()
+  return fallback
 }
 
 // Response types
@@ -130,6 +208,14 @@ export interface CVAnalysesResponse {
   analyses: CVAnalysisResponse[]
 }
 
+export type UploadCVResult =
+  | { ok: true; data: CVAnalysisResponse }
+  | { ok: false; message: string; status?: number }
+
+export type DownloadRPGCVResult =
+  | { ok: true; blob: Blob; filename: string }
+  | { ok: false; message: string; status?: number }
+
 export interface AnalyzeRepoResponse {
   repo: string
   score: number
@@ -206,10 +292,8 @@ export interface OracleHistoryResponse {
 }
 
 export interface OracleStatsResponse {
-  messages_sent: number
   wisdom_score: number
   topics_explored: number
-  oracle_level: number
 }
 
 export interface OracleWeeklySummaryResponse {
@@ -253,15 +337,52 @@ export const api = {
   getQuestStats: () => fetchAPI<QuestStatsResponse>('/github/quest-stats'),
 
   // CV
-  uploadCV: async (file: File): Promise<CVAnalysisResponse | null> => {
+  uploadCV: async (file: File): Promise<UploadCVResult> => {
     try {
       const form = new FormData()
       form.append('file', file)
-      const resp = await fetch(`${API_BASE}/cv/upload`, { method: 'POST', body: form })
-      if (!resp.ok) return null
-      return resp.json()
+      const resp = await fetch(`${API_BASE}/cv/upload`, {
+        method: 'POST',
+        body: form,
+        credentials: 'include',
+      })
+      if (!resp.ok) {
+        return {
+          ok: false,
+          status: resp.status,
+          message: await readErrorMessage(resp, 'Unable to analyze CV right now.'),
+        }
+      }
+      const payload = (await resp.json()) as CVAnalysisResponse | ApiEnvelope<CVAnalysisResponse>
+      if (isApiEnvelope(payload)) {
+        if (!payload.ok) {
+          return { ok: false, message: payload.error.message || 'Unable to analyze CV right now.' }
+        }
+        return { ok: true, data: payload.data }
+      }
+      return { ok: true, data: payload as CVAnalysisResponse }
     } catch {
-      return null
+      return { ok: false, message: 'Network error while uploading CV.' }
+    }
+  },
+  downloadRPGCV: async (): Promise<DownloadRPGCVResult> => {
+    try {
+      const resp = await fetch(`${API_BASE}/cv/download-rpg`, {
+        method: 'GET',
+        credentials: 'include',
+      })
+      if (!resp.ok) {
+        return {
+          ok: false,
+          status: resp.status,
+          message: await readErrorMessage(resp, 'Unable to generate RPG CV PDF.'),
+        }
+      }
+      const blob = await resp.blob()
+      const filename = extractFilename(resp.headers.get('Content-Disposition'), 'rpg-cv.pdf')
+      return { ok: true, blob, filename }
+    } catch {
+      return { ok: false, message: 'Network error while downloading RPG CV.' }
     }
   },
   getAnalysis: () => fetchAPI<CVAnalysisResponse>('/cv/analysis'),
