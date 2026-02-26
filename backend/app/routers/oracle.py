@@ -9,7 +9,8 @@ from sqlmodel import Session, col, func, select
 from app.database import get_session
 from app.models import ChatMessage, PlayerProfile, Skill
 from app.services.gamification_engine import award_xp
-from app.services.mock_ai import oracle_chat, weekly_summary
+from app.services.mock_ai import weekly_summary
+from app.services.oracle_service import generate_oracle_reply
 
 router = APIRouter(prefix="/oracle", tags=["oracle"])
 
@@ -43,33 +44,53 @@ def _get_skills_list(session: Session) -> list[dict]:
     ]
 
 
+def _get_recent_history(session: Session, limit: int = 10) -> list[dict]:
+    messages = session.exec(
+        select(ChatMessage)
+        .order_by(col(ChatMessage.id).desc())
+        .limit(limit)
+    ).all()
+    recent = list(reversed(messages))
+    return [
+        {"role": m.role, "text": m.text, "created_at": m.created_at}
+        for m in recent
+    ]
+
+
 @router.post("/chat")
 async def chat(req: ChatRequest, session: Session = Depends(get_session)):
-    """Process chat message with context-aware Oracle and persist both sides."""
+    """Process chat message with LLM-backed Oracle and persist both sides."""
     now = datetime.now(timezone.utc).isoformat()
+    user_message = req.message.strip()
+    recent_history = _get_recent_history(session, limit=10)
 
     # Persist user message
-    user_msg = ChatMessage(role="user", text=req.message, context_topic="", created_at=now)
+    user_msg = ChatMessage(role="user", text=user_message, context_topic="", created_at=now)
     session.add(user_msg)
 
     # Get context from DB for richer responses
     profile = _get_profile_dict(session)
     skills = _get_skills_list(session)
 
-    # Generate Oracle response
-    result = oracle_chat(req.message, profile=profile, skills=skills)
+    # Generate Oracle response with graceful fallback inside service.
+    result = await generate_oracle_reply(
+        user_message=user_message,
+        profile=profile,
+        skills=skills,
+        recent_history=recent_history,
+    )
 
     # Persist Oracle response
     oracle_msg = ChatMessage(
-        role="oracle", text=result["text"], context_topic=result["topic"], created_at=now,
+        role="oracle", text=result.text, context_topic=result.topic, created_at=now,
     )
     session.add(oracle_msg)
     session.commit()
 
     # Award XP for consulting the Oracle
-    gamification = award_xp(session, "oracle_chat", f"Consulted Oracle: {result['topic']}", 25)
+    gamification = award_xp(session, "oracle_chat", f"Consulted Oracle: {result.topic}", 25)
 
-    return {"role": "oracle", "text": result["text"], "topic": result["topic"], "gamification": gamification}
+    return {"role": "oracle", "text": result.text, "topic": result.topic, "gamification": gamification}
 
 
 @router.get("/history")

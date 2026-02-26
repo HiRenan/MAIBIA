@@ -3,3 +3,6 @@ uvicorn[standard]
 sqlmodel
 python-multipart
 httpx
+openai
+pypdf
+python-docx

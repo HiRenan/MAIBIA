@@ -7,6 +7,11 @@ const mouse = { x: 0, y: 0 }
 
 function MouseParallax() {
   const { camera } = useThree()
+  const cameraRef = useRef(camera)
+
+  useEffect(() => {
+    cameraRef.current = camera
+  }, [camera])
 
   useEffect(() => {
     function onMove(e: MouseEvent) {
@@ -18,10 +23,11 @@ function MouseParallax() {
   }, [])
 
   useFrame(() => {
+    const activeCamera = cameraRef.current
     const targetX = mouse.x * 0.3
     const targetY = mouse.y * 0.3
-    camera.position.x += (targetX - camera.position.x) * 0.05
-    camera.position.y += (targetY - camera.position.y) * 0.05
+    activeCamera.position.x += (targetX - activeCamera.position.x) * 0.05
+    activeCamera.position.y += (targetY - activeCamera.position.y) * 0.05
   })
 
   return null

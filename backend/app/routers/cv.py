@@ -8,8 +8,8 @@ from sqlmodel import Session, select
 
 from app.database import get_session
 from app.models import CVAnalysis
+from app.services.cv_service import analyze_uploaded_cv
 from app.services.gamification_engine import award_xp
-from app.services.mock_ai import analyze_cv
 
 router = APIRouter(prefix="/cv", tags=["cv"])
 
@@ -34,12 +34,13 @@ async def upload_cv(
     file: UploadFile = File(...),
     session: Session = Depends(get_session),
 ):
-    """Accept file upload, run mock analysis, persist to DB."""
+    """Accept file upload, run structured analysis, persist to DB."""
     contents = await file.read()
     filename = file.filename or "unknown.pdf"
     file_size = len(contents)
 
-    result = analyze_cv(filename, file_size)
+    service_result = await analyze_uploaded_cv(filename=filename, file_size=file_size, contents=contents)
+    result = service_result.analysis.model_dump()
 
     record = CVAnalysis(
         filename=filename,

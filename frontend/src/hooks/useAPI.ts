@@ -13,26 +13,30 @@ export function useAPI<T>(fetcher: () => Promise<T | null>, fallback: T): {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const fetcherRef = useRef(fetcher)
-  fetcherRef.current = fetcher
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
 
-    fetcherRef.current().then((result) => {
-      if (cancelled) return
-      if (result !== null) {
-        setData(result)
-      } else {
+    fetcherRef.current()
+      .then((result) => {
+        if (cancelled) return
+        if (result !== null) {
+          setData(result)
+        } else {
+          setError(true)
+        }
+        setLoading(false)
+      })
+      .catch(() => {
+        if (cancelled) return
         setError(true)
-      }
-      setLoading(false)
-    })
+        setLoading(false)
+      })
 
     return () => {
       cancelled = true
     }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [])
 
   return { data, loading, error }
 }
